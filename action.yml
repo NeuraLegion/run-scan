@@ -1,10 +1,46 @@
 name: 'Hello World'
 description: 'Greet someone and record the time'
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
 inputs:
-  who-to-greet:
-    description: 'Who to greet'
+  api_token:
+    description: 'Api Token. You can generate it in Organization section'
     required: true
-    default: 'World'
+  hostname:
+    description: 'Hostname'
+    required: true
+    default: 'nexploit.app'
+#  file_id:
+#    description: 'HAR-file ID'
+#    required: false
+  discovery_types:
+    description: 'Discovery type. Can be: archive, crawler, oas. Specify separated by commas'
+    required: false
+    default: '["archive"]'
+#  crawler_urls:
+#    description: 'Crawler URLs. Specify separated by commas'
+#    required: false
+#  module:
+#    description: 'Possible values: *core*, *exploratory*'
+#    required: false
+#    default: 'core'
+#  hosts_filter:
+#    description: 'Hosts Filter. Specify separated by commas'
+#    required: false
+#  type:
+#    description: 'Possible values: *appscan*, *protoscan*'
+#    default: 'appscan'
+#    required: true
+#  protocol:
+#    description: 'Possible values: *http*, *websocket*'
+#    required: true
+#    default: 'http'
+#  name:
+#    description: 'Scan Name'
+#    default: 'GitHub Scan'
+#    required: false
+
 outputs:
   time:
     description: 'The time we greeted you'

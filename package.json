@@ -8,7 +8,7 @@
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts",
-    "pack": "ncc build"
+    "pack": "ncc build dist/index.js"
   },
   "keywords": [],
   "author": "",

@@ -7,8 +7,10 @@ jobs:
     steps:
     - name: Hello world action step
       id: hello
-      uses: NeuraLegion/ghaction@v2
+      uses: NeuraLegion/ghaction@master
       with:
-        who-to-greet: 'Mona the Octocat'
+        api_token: 'Mona the Octocat'
+        discovery_types: | 
+          [ "arhive", "crawler" ]
     - name: Get the output time
       run: echo "The time was ${{ steps.hello.outputs.time }}"
