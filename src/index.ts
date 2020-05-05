@@ -1,5 +1,4 @@
 import * as core from "@actions/core";
-import * as github from "@actions/github";
 import * as rm from "typed-rest-client/RestClient";
 
 const apiToken = core.getInput("api_token");
