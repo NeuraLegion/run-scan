@@ -1,7 +1,7 @@
 on: [push]
 
 jobs:
-  hello_world_job:
+  start_scan:
     runs-on: ubuntu-latest
     name: A job to run a Nexploit scan
     steps:
@@ -10,14 +10,14 @@ jobs:
       uses: NeuraLegion/run-scan@master
       with:
         api_token: ${{ secrets.NEXPLOIT_TOKEN }}
-        restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
+#        restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
         name: GitHub scan ${{ github.sha }}
-#        discovery_types: |
-#          [ "crawler", "archive" ]
-#        crawler_urls: |
-#          [ "http://vulnerable-bank.com" ]
-#        file_id: LiYknMYSdbSZbqgMaC9Sj
-#        hosts_filter: |
-#          [ ]
+        discovery_types: |
+          [ "crawler", "archive" ]
+        crawler_urls: |
+          [ "https://juice-shop.herokuapp.com" ]
+        file_id: LiYknMYSdbSZbqgMaC9Sj
+        hosts_filter: |
+          [ ]
     - name: Get the output scan url
       run: echo "The scan was started on ${{ steps.start.outputs.url }}"

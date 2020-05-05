@@ -1,0 +1,16 @@
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container: node:14
+    name: Build GitHub Action
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: npm install && npm install -g typescript && npm install -g @zeit/ncc
+    - name: Build release
+      run: npm run build && npm run pack
