@@ -1,21 +1,80 @@
-# Hello world javascript action
+# Nexploit Scan Runner
 
-This action prints "Hello World" or "Hello" + the name of a person to greet to the log.
+This action runs a new scan in Nexploit, or reruns an existing one.
 
 ## Inputs
 
-### `who-to-greet`
+### `api_token`
 
-**Required** The name of the person to greet. Default `"World"`.
+**Required** Api Token. You can generate it in *Organization* section
+
+### `restart_scan`
+
+Scan ID to restart.
+
+### `file_id`
+
+HAR-file ID.
+
+### `discovery_types`
+
+Array of discovery types. Can be: archive, crawler, oas.
+
+Example:
+
+```yml
+discovery_types: |
+  [ "crawler", "archive" ]
+```
+
+### `crawler_urls`
+
+Crawler URLs
+
+Example:
+
+```yml
+crawler_urls: |
+  [ "http://vulnerable-bank.com" ]
+```
+
+### `module`
+
+Possible values: *core*, *exploratory*
+
+### `hosts_filter`
+
+Hosts filter
+
+### `name`
+
+Scan name.
+
+Example: ```name: GitHub scan ${{ github.sha }}```
 
 ## Outputs
 
-### `time`
+### `url`
 
-The time we greeted you.
+Url of the resulting scan
 
 ## Example usage
 
-uses: actions/hello-world-javascript-action@v1
-with:
-  who-to-greet: 'Mona the Octocat'
+```yml
+steps:
+    - name: Start Nexploit Scan
+      id: start
+      uses: NeuraLegion/run-scan@v0.1
+      with:
+        api_token: ${{ secrets.NEXPLOIT_TOKEN }}
+        name: GitHub scan ${{ github.sha }}
+        discovery_types: |
+          [ "crawler", "archive" ]
+        crawler_urls: |
+          [ "http://vulnerable-bank.com" ]
+        file_id: LiYknMYSdbSZbqgMaC9Sj
+        hosts_filter: |
+          [ ]
+    - name: Get the output scan url
+      run: echo "The scan was started on ${{ steps.start.outputs.url }}"
+```
