@@ -14,3 +14,15 @@ jobs:
       run: npm install && npm install -g typescript && npm install -g @zeit/ncc
     - name: Build release
       run: npm run build && npm run pack
+    - name: Copy files to release
+      run: |
+        mkdir release
+        cp README.md release/
+        cp action.yml release/
+        cp -R dist/ release/dist/
+    - name: Push changes to the branch
+      uses: JamesIves/github-pages-deploy-action@releases/v3
+      with:
+        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        BRANCH: release
+        FOLDER: release
