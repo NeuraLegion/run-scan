@@ -1,0 +1,41 @@
+name: 'Nexploit'
+description: 'Run a Nexploit scan right in GitHub Action'
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
+inputs:
+  api_token:
+    description: 'Api Token. You can generate it in Organization section'
+    required: true
+  restart_scan:
+    description: 'Scan ID to restart'
+    required: false
+  hostname:
+    description: 'Hostname. Default is nexploit.app'
+    required: false
+  file_id:
+    description: 'HAR-file ID'
+    required: false
+  discovery_types:
+    description: 'Discovery type. Can be: archive, crawler, oas. Specify separated by commas'
+    required: false
+  crawler_urls:
+    description: 'Crawler URLs. Specify separated by commas'
+    required: false
+  module:
+    description: 'Possible values: *core*, *exploratory*'
+    required: false
+  hosts_filter:
+    description: 'Hosts Filter. Specify separated by commas'
+    required: false
+  name:
+    description: 'Scan Name'
+    default: 'GitHub Scan'
+    required: false
+
+outputs:
+  url:
+    description: 'Url for a scan'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
