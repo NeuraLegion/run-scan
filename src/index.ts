@@ -16,7 +16,7 @@ const type = core.getInput("type");
 const hostname = core.getInput("hostname");
 
 const waitFor__ = core.getInput("wait_for");
-const waitFor_: Severity = <Severity>waitFor__;
+const waitFor_ = waitFor__ ? <Severity>waitFor__ : null;
 const interval = 10000;
 const timeout = 60 * 60 * 1000;
 
