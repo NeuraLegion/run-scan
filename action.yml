@@ -33,7 +33,7 @@ inputs:
     default: 'GitHub Scan'
     required: false
   wait_for:
-    description: Wait for first issue
+    description: 'Wait for first issue: *on_any*, *on_medium*, *on_high*'
     required: false
 
 outputs:
