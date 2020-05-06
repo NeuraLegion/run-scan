@@ -2,11 +2,7 @@ import * as core from "@actions/core";
 import * as rm from "typed-rest-client/RestClient";
 import * as poll from "./async-poller";
 
-enum Severity {
-  any = 'on_any',
-  medium = 'on_medium',
-  high = 'on_high'
-}
+type Severity = 'on_any' | 'on_medium' | 'on_high';
 
 const apiToken = core.getInput("api_token");
 const restartScanID = core.getInput("restart_scan");
@@ -19,7 +15,8 @@ const hostsFilter = getArray("hosts_filter");
 const type = core.getInput("type");
 const hostname = core.getInput("hostname");
 
-const wait_for = Severity.any;
+const waitFor__ = core.getInput("wait_for");
+const waitFor_ : Severity = <Severity>waitFor__;
 const interval = 10000;
 const timeout = 60*60*1000;
 
@@ -212,8 +209,7 @@ async function waitFor(uuid:string) {
     async (): Promise<poll.AsyncData<any>> => {
       try {
         const status = await getStatus(apiToken, uuid);
-        console.debug(status);
-        const stop = issueFound(wait_for, status.issuesBySeverity);
+        const stop = issueFound(waitFor_, status.issuesBySeverity);
         const state = status.status;
         const url = `https://nexploit.app/scans/${uuid}`
 
@@ -250,9 +246,9 @@ async function waitFor(uuid:string) {
 function issueFound(severity: Severity, issues: IssuesBySeverity[]): boolean {
   var types: string[];
 
-  if (severity == Severity.any) {
+  if (severity == 'on_any') {
     types = ["Low", "Medium", "High"];
-  } else if (severity == Severity.medium) {
+  } else if (severity == 'on_medium') {
     types = ["Medium", "High"];
   } else {
     types = ["High"];

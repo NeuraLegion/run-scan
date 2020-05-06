@@ -19,5 +19,6 @@ jobs:
         file_id: LiYknMYSdbSZbqgMaC9Sj
         hosts_filter: |
           [ ]
+        wait_for: on_any
     - name: Get the output scan url
       run: echo "The scan was started on ${{ steps.start.outputs.url }}"
