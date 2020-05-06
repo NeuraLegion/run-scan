@@ -1548,6 +1548,9 @@ else {
 function waitFor(uuid) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log("Scan was created " + uuid);
+        if (!waitFor_) {
+            return;
+        }
         poll
             .asyncPoll(() => __awaiter(this, void 0, void 0, function* () {
             try {
