@@ -1402,7 +1402,7 @@ const hostsFilter = getArray("hosts_filter");
 const type = core.getInput("type");
 const hostname = core.getInput("hostname");
 const waitFor__ = core.getInput("wait_for");
-const waitFor_ = waitFor__;
+const waitFor_ = waitFor__ ? waitFor__ : null;
 const interval = 10000;
 const timeout = 60 * 60 * 1000;
 function getArray(name) {
