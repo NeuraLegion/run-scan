@@ -1459,7 +1459,7 @@ function retest(token, uuid, name) {
         catch (err) {
             core.setFailed("Failed: " + err.message);
         }
-        return Promise.reject("erturn");
+        return Promise.reject();
     });
 }
 function create(token, scan) {
