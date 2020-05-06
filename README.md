@@ -52,6 +52,11 @@ Scan name.
 
 Example: ```name: GitHub scan ${{ github.sha }}```
 
+### `wait_for`
+
+Sets failure if the scan founds an issue: `on_any` issue, `on_medium` or
+`on_high`.
+
 ## Outputs
 
 ### `url`
@@ -75,6 +80,7 @@ steps:
         file_id: LiYknMYSdbSZbqgMaC9Sj
         hosts_filter: |
           [ ]
+        wait_for: on_any
     - name: Get the output scan url
       run: echo "The scan was started on ${{ steps.start.outputs.url }}"
 ```
