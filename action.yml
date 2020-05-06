@@ -32,6 +32,9 @@ inputs:
     description: 'Scan Name'
     default: 'GitHub Scan'
     required: false
+  wait_for:
+    description: Wait for first issue
+    required: false
 
 outputs:
   url:
