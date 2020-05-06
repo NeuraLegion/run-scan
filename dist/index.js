@@ -1849,8 +1849,10 @@ function getStatus(token, uuid) {
         try {
             let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
             let restRes = yield restc.get(`api/v1/scans/${uuid}`, options);
-            console.debug(restRes.result.issuesBySeverity);
-            const status = { status: restRes.result.status, issuesBySeverity: restRes.result.issuesBySeverity };
+            const status = {
+                status: restRes.result.status,
+                issuesBySeverity: restRes.result.issuesBySeverity,
+            };
             switch (restRes.statusCode) {
                 case 200: {
                     return Promise.resolve(status);
@@ -1896,11 +1898,14 @@ else {
         hostsFilter,
     }).then(waitFor);
 }
-;
 function waitFor(uuid) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log("Scan was created " + uuid);
-        poll.asyncPoll(() => __awaiter(this, void 0, void 0, function* () {
+        if (!waitFor_) {
+            return;
+        }
+        poll
+            .asyncPoll(() => __awaiter(this, void 0, void 0, function* () {
             try {
                 const status = yield getStatus(apiToken, uuid);
                 const stop = issueFound(waitFor_, status.issuesBySeverity);
@@ -1909,18 +1914,18 @@ function waitFor(uuid) {
                 if (stop == true) {
                     core.setFailed(`Issues were found. See on ${url}`);
                     return Promise.resolve({
-                        done: true
+                        done: true,
                     });
                 }
                 else if (state == "failed") {
                     core.setFailed(`Scan failed. See on ${url}`);
                     return Promise.resolve({
-                        done: true
+                        done: true,
                     });
                 }
                 else if (state == "stopped") {
                     return Promise.resolve({
-                        done: true
+                        done: true,
                     });
                 }
                 else {
@@ -1932,17 +1937,18 @@ function waitFor(uuid) {
             catch (err) {
                 return Promise.reject(err);
             }
-        }), interval, timeout).catch(function (e) {
+        }), interval, timeout)
+            .catch(function (e) {
             core.info("===== Timeout ====");
         });
     });
 }
 function issueFound(severity, issues) {
     var types;
-    if (severity == 'on_any') {
+    if (severity == "on_any") {
         types = ["Low", "Medium", "High"];
     }
-    else if (severity == 'on_medium') {
+    else if (severity == "on_medium") {
         types = ["Medium", "High"];
     }
     else {

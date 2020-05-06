@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as rm from "typed-rest-client/RestClient";
 import * as poll from "./async-poller";
 
-type Severity = 'on_any' | 'on_medium' | 'on_high';
+type Severity = "on_any" | "on_medium" | "on_high";
 
 const apiToken = core.getInput("api_token");
 const restartScanID = core.getInput("restart_scan");
@@ -16,9 +16,9 @@ const type = core.getInput("type");
 const hostname = core.getInput("hostname");
 
 const waitFor__ = core.getInput("wait_for");
-const waitFor_ : Severity = <Severity>waitFor__;
+const waitFor_: Severity = <Severity>waitFor__;
 const interval = 10000;
-const timeout = 60*60*1000;
+const timeout = 60 * 60 * 1000;
 
 function getArray(name: string): string[] | null {
   const input = core.getInput(name);
@@ -44,7 +44,11 @@ interface Scan {
   id: string;
 }
 
-async function retest(token: string, uuid: string, name?: string) : Promise<string> {
+async function retest(
+  token: string,
+  uuid: string,
+  name?: string
+): Promise<string> {
   let scan_name = name || "GitHub Actions";
 
   try {
@@ -122,7 +126,9 @@ async function create(token: string, scan: NewScan): Promise<string> {
         core.setFailed(
           "The account doesn't have any permissions for a resource"
         );
-        return Promise.reject("The account doesn't have any permissions for a resource");
+        return Promise.reject(
+          "The account doesn't have any permissions for a resource"
+        );
       }
     }
   } catch (err) {
@@ -133,21 +139,26 @@ async function create(token: string, scan: NewScan): Promise<string> {
 }
 
 interface Status {
-  status: string,
-  issuesBySeverity: IssuesBySeverity[]
+  status: string;
+  issuesBySeverity: IssuesBySeverity[];
 }
 
 interface IssuesBySeverity {
-  number: number,
-  type: string
+  number: number;
+  type: string;
 }
 
-async function getStatus(token: string, uuid: string) : Promise<Status> {
+async function getStatus(token: string, uuid: string): Promise<Status> {
   try {
     let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-    let restRes: rm.IRestResponse<Status> = await restc.get<Status>(`api/v1/scans/${uuid}`, options);
-    console.debug(restRes.result!.issuesBySeverity);
-    const status : Status = { status : restRes.result!.status, issuesBySeverity : restRes.result!.issuesBySeverity};
+    let restRes: rm.IRestResponse<Status> = await restc.get<Status>(
+      `api/v1/scans/${uuid}`,
+      options
+    );
+    const status: Status = {
+      status: restRes.result!.status,
+      issuesBySeverity: restRes.result!.issuesBySeverity,
+    };
 
     switch (restRes.statusCode) {
       case 200: {
@@ -200,62 +211,68 @@ if (restartScanID) {
     fileId,
     hostsFilter,
   }).then(waitFor);
-};
+}
 
-async function waitFor(uuid:string) {
+async function waitFor(uuid: string) {
   console.log("Scan was created " + uuid);
 
-  poll.asyncPoll(
-    async (): Promise<poll.AsyncData<any>> => {
-      try {
-        const status = await getStatus(apiToken, uuid);
-        const stop = issueFound(waitFor_, status.issuesBySeverity);
-        const state = status.status;
-        const url = `https://nexploit.app/scans/${uuid}`
+  if (!waitFor_) {
+    return;
+  }
 
-        if (stop == true) {
-          core.setFailed(`Issues were found. See on ${url}`);
-          return Promise.resolve({
-            done: true
-          });
-        } else if (state == "failed") {
-          core.setFailed(`Scan failed. See on ${url}`);
-          return Promise.resolve({
-            done: true
-          });
-        } else if (state == "stopped") {
-          return Promise.resolve({
-            done: true
-          });
-        } else {
-          return Promise.resolve({
-            done: false,
-          });
+  poll
+    .asyncPoll(
+      async (): Promise<poll.AsyncData<any>> => {
+        try {
+          const status = await getStatus(apiToken, uuid);
+          const stop = issueFound(waitFor_, status.issuesBySeverity);
+          const state = status.status;
+          const url = `https://nexploit.app/scans/${uuid}`;
+
+          if (stop == true) {
+            core.setFailed(`Issues were found. See on ${url}`);
+            return Promise.resolve({
+              done: true,
+            });
+          } else if (state == "failed") {
+            core.setFailed(`Scan failed. See on ${url}`);
+            return Promise.resolve({
+              done: true,
+            });
+          } else if (state == "stopped") {
+            return Promise.resolve({
+              done: true,
+            });
+          } else {
+            return Promise.resolve({
+              done: false,
+            });
+          }
+        } catch (err) {
+          return Promise.reject(err);
         }
-      } catch (err) {
-        return Promise.reject(err);
-      }
-    },
-    interval,
-    timeout
-  ).catch(function(e) {
-    core.info("===== Timeout ====");
-  })
+      },
+      interval,
+      timeout
+    )
+    .catch(function (e) {
+      core.info("===== Timeout ====");
+    });
 }
 
 function issueFound(severity: Severity, issues: IssuesBySeverity[]): boolean {
   var types: string[];
 
-  if (severity == 'on_any') {
+  if (severity == "on_any") {
     types = ["Low", "Medium", "High"];
-  } else if (severity == 'on_medium') {
+  } else if (severity == "on_medium") {
     types = ["Medium", "High"];
   } else {
     types = ["High"];
   }
 
   for (let issue of issues) {
-    if (issue.number > 0 && types.includes(issue.type) ) {
+    if (issue.number > 0 && types.includes(issue.type)) {
       return true;
     }
   }
