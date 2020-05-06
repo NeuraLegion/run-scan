@@ -1391,12 +1391,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(68));
 const rm = __importStar(__webpack_require__(667));
 const poll = __importStar(__webpack_require__(991));
-var Severity;
-(function (Severity) {
-    Severity["any"] = "on_any";
-    Severity["medium"] = "on_medium";
-    Severity["high"] = "on_high";
-})(Severity || (Severity = {}));
 const apiToken = core.getInput("api_token");
 const restartScanID = core.getInput("restart_scan");
 const name = core.getInput("name");
@@ -1407,7 +1401,8 @@ const module_in = core.getInput("module");
 const hostsFilter = getArray("hosts_filter");
 const type = core.getInput("type");
 const hostname = core.getInput("hostname");
-const wait_for = Severity.any;
+const waitFor__ = core.getInput("wait_for");
+const waitFor_ = waitFor__;
 const interval = 10000;
 const timeout = 60 * 60 * 1000;
 function getArray(name) {
@@ -1555,8 +1550,7 @@ function waitFor(uuid) {
         poll.asyncPoll(() => __awaiter(this, void 0, void 0, function* () {
             try {
                 const status = yield getStatus(apiToken, uuid);
-                console.debug(status);
-                const stop = issueFound(wait_for, status.issuesBySeverity);
+                const stop = issueFound(waitFor_, status.issuesBySeverity);
                 const state = status.status;
                 const url = `https://nexploit.app/scans/${uuid}`;
                 if (stop == true) {
@@ -1592,10 +1586,10 @@ function waitFor(uuid) {
 }
 function issueFound(severity, issues) {
     var types;
-    if (severity == Severity.any) {
+    if (severity == 'on_any') {
         types = ["Low", "Medium", "High"];
     }
-    else if (severity == Severity.medium) {
+    else if (severity == 'on_medium') {
         types = ["Medium", "High"];
     }
     else {
