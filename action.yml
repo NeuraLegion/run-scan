@@ -36,6 +36,8 @@ inputs:
 outputs:
   url:
     description: 'Url of the resulting scan'
+  id:
+    description: Scan ID
 runs:
   using: 'node12'
   main: 'dist/index.js'
