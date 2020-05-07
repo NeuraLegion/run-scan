@@ -1,8 +1,5 @@
 import * as core from "@actions/core";
 import * as rm from "typed-rest-client/RestClient";
-import * as poll from "./async-poller";
-
-type Severity = "on_any" | "on_medium" | "on_high";
 
 const apiToken = core.getInput("api_token");
 const restartScanID = core.getInput("restart_scan");
@@ -14,11 +11,6 @@ const module_in = core.getInput("module");
 const hostsFilter = getArray("hosts_filter");
 const type = core.getInput("type");
 const hostname = core.getInput("hostname");
-
-const waitFor__ = core.getInput("wait_for");
-const waitFor_ = waitFor__ ? <Severity>waitFor__ : null;
-const interval = 10000;
-const timeout = 60 * 60 * 1000;
 
 function getArray(name: string): string[] | null {
   const input = core.getInput(name);
@@ -135,7 +127,7 @@ async function create(token: string, scan: NewScan): Promise<string> {
     core.setFailed("Failed: " + err.message);
   }
 
-  return Promise.reject("erturn");
+  return Promise.reject();
 }
 
 interface Status {
@@ -193,7 +185,7 @@ if (restartScanID) {
       type
     )
   ) {
-    retest(apiToken, restartScanID, name).then(waitFor);
+    retest(apiToken, restartScanID, name);
   } else {
     core.setFailed(
       "You don't need parameters, other than api_token, restart_scan and name, if you just want to restart an existing scan"
@@ -210,72 +202,5 @@ if (restartScanID) {
     crawlerUrls,
     fileId,
     hostsFilter,
-  }).then(waitFor);
-}
-
-async function waitFor(uuid: string) {
-  console.log("Scan was created " + uuid);
-
-  if (!waitFor_) {
-    return;
-  }
-
-  poll
-    .asyncPoll(
-      async (): Promise<poll.AsyncData<any>> => {
-        try {
-          const status = await getStatus(apiToken, uuid);
-          const stop = issueFound(waitFor_, status.issuesBySeverity);
-          const state = status.status;
-          const url = `https://nexploit.app/scans/${uuid}`;
-
-          if (stop == true) {
-            core.setFailed(`Issues were found. See on ${url}`);
-            return Promise.resolve({
-              done: true,
-            });
-          } else if (state == "failed") {
-            core.setFailed(`Scan failed. See on ${url}`);
-            return Promise.resolve({
-              done: true,
-            });
-          } else if (state == "stopped") {
-            return Promise.resolve({
-              done: true,
-            });
-          } else {
-            return Promise.resolve({
-              done: false,
-            });
-          }
-        } catch (err) {
-          return Promise.reject(err);
-        }
-      },
-      interval,
-      timeout
-    )
-    .catch(function (e) {
-      core.info("===== Timeout ====");
-    });
-}
-
-function issueFound(severity: Severity, issues: IssuesBySeverity[]): boolean {
-  var types: string[];
-
-  if (severity == "on_any") {
-    types = ["Low", "Medium", "High"];
-  } else if (severity == "on_medium") {
-    types = ["Medium", "High"];
-  } else {
-    types = ["High"];
-  }
-
-  for (let issue of issues) {
-    if (issue.number > 0 && types.includes(issue.type)) {
-      return true;
-    }
-  }
-
-  return false;
+  });
 }

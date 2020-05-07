@@ -13,7 +13,7 @@ jobs:
       uses: NeuraLegion/run-scan@master
       with:
         api_token: ${{ secrets.NEXPLOIT_TOKEN }}
-#        restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
+#       restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
         name: GitHub scan ${{ github.sha }}
         discovery_types: |
           [ "crawler", "archive" ]
@@ -22,6 +22,5 @@ jobs:
         file_id: LiYknMYSdbSZbqgMaC9Sj
         hosts_filter: |
           [ ]
-        wait_for: on_high
     - name: Get the output scan url
       run: echo "The scan was started on ${{ steps.start.outputs.url }}"
