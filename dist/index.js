@@ -1834,7 +1834,6 @@ function retest(token, uuid, name) {
     });
 }
 function create(token, scan) {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             console.debug(scan);
@@ -1842,9 +1841,11 @@ function create(token, scan) {
             let restRes = yield restc.create("api/v1/scans/", scan, options);
             switch (restRes.statusCode) {
                 case 201: {
-                    let url = `https://nexploit.app/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
+                    let id = restRes.result.id;
+                    let url = `https://nexploit.app/scans/${id}`;
                     console.log(`Success. Scan was created on ${url}`);
                     core.setOutput("url", url);
+                    core.setOutput("id", id);
                     return Promise.resolve(restRes.result.id);
                 }
                 case 400: {

@@ -101,9 +101,11 @@ async function create(token: string, scan: NewScan): Promise<string> {
 
     switch (restRes.statusCode) {
       case 201: {
-        let url = `https://nexploit.app/scans/${restRes.result?.id}`;
+        let id = restRes.result!.id;
+        let url = `https://nexploit.app/scans/${id}`;
         console.log(`Success. Scan was created on ${url}`);
         core.setOutput("url", url);
+        core.setOutput("id", id);
         return Promise.resolve(restRes.result!.id);
       }
       case 400: {

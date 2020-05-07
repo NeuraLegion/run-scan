@@ -23,4 +23,6 @@ jobs:
         hosts_filter: |
           [ ]
     - name: Get the output scan url
-      run: echo "The scan was started on ${{ steps.start.outputs.url }}"
+      run: |
+        echo "The scan ${{ steps.start.outputs.id }} was started on
+        ${{ steps.start.outputs.url }}"
