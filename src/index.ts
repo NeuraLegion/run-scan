@@ -130,50 +130,6 @@ async function create(token: string, scan: NewScan): Promise<string> {
   return Promise.reject();
 }
 
-interface Status {
-  status: string;
-  issuesBySeverity: IssuesBySeverity[];
-}
-
-interface IssuesBySeverity {
-  number: number;
-  type: string;
-}
-
-async function getStatus(token: string, uuid: string): Promise<Status> {
-  try {
-    let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-    let restRes: rm.IRestResponse<Status> = await restc.get<Status>(
-      `api/v1/scans/${uuid}`,
-      options
-    );
-    const status: Status = {
-      status: restRes.result!.status,
-      issuesBySeverity: restRes.result!.issuesBySeverity,
-    };
-
-    switch (restRes.statusCode) {
-      case 200: {
-        return Promise.resolve(status);
-      }
-      case 401: {
-        core.setFailed("Failed to log in with provided credentials");
-        break;
-      }
-      case 403: {
-        core.setFailed(
-          "The account doesn't have any permissions for a resource"
-        );
-        break;
-      }
-    }
-  } catch (err) {
-    console.debug("Timeout reached");
-  }
-
-  return Promise.reject();
-}
-
 if (restartScanID) {
   if (
     !(
