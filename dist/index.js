@@ -1486,35 +1486,6 @@ function create(token, scan) {
         return Promise.reject();
     });
 }
-function getStatus(token, uuid) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-            let restRes = yield restc.get(`api/v1/scans/${uuid}`, options);
-            const status = {
-                status: restRes.result.status,
-                issuesBySeverity: restRes.result.issuesBySeverity,
-            };
-            switch (restRes.statusCode) {
-                case 200: {
-                    return Promise.resolve(status);
-                }
-                case 401: {
-                    core.setFailed("Failed to log in with provided credentials");
-                    break;
-                }
-                case 403: {
-                    core.setFailed("The account doesn't have any permissions for a resource");
-                    break;
-                }
-            }
-        }
-        catch (err) {
-            console.debug("Timeout reached");
-        }
-        return Promise.reject();
-    });
-}
 if (restartScanID) {
     if (!(fileId ||
         crawlerUrls ||
