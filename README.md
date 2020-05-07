@@ -54,8 +54,8 @@ Example: ```name: GitHub scan ${{ github.sha }}```
 
 ### `wait_for`
 
-Sets failure if the scan founds an issue: `on_any` issue, `on_medium` or
-`on_high`.
+Stops step and sets a failure if the scan founds an issue: `on_any` issue,
+`on_medium` or `on_high`
 
 ## Outputs
 
@@ -65,11 +65,13 @@ Url of the resulting scan
 
 ## Example usage
 
+Start a new scan with parameters
+
 ```yml
 steps:
     - name: Start Nexploit Scan
       id: start
-      uses: NeuraLegion/run-scan@v0.1
+      uses: NeuraLegion/run-scan@v0.2
       with:
         api_token: ${{ secrets.NEXPLOIT_TOKEN }}
         name: GitHub scan ${{ github.sha }}
@@ -80,6 +82,22 @@ steps:
         file_id: LiYknMYSdbSZbqgMaC9Sj
         hosts_filter: |
           [ ]
+        wait_for: on_any
+    - name: Get the output scan url
+      run: echo "The scan was started on ${{ steps.start.outputs.url }}"
+```
+
+Restart an existing scan
+
+```yml
+steps:
+    - name: Start Nexploit Scan
+      id: start
+      uses: NeuraLegion/run-scan@v0.2
+      with:
+        api_token: ${{ secrets.NEXPLOIT_TOKEN }}
+        name: GitHub scan ${{ github.sha }}
+        restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
         wait_for: on_any
     - name: Get the output scan url
       run: echo "The scan was started on ${{ steps.start.outputs.url }}"
