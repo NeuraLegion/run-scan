@@ -36,11 +36,7 @@ interface Scan {
   id: string;
 }
 
-async function retest(
-  token: string,
-  uuid: string,
-  name?: string
-): Promise<string> {
+async function retest(token: string, uuid: string, name?: string) {
   let scan_name = name || "GitHub Actions";
 
   try {
@@ -56,28 +52,26 @@ async function retest(
         let url = `https://nexploit.app/scans/${restRes.result?.id}`;
         console.log(`Success. Scan was created on ${url}`);
         core.setOutput("url", url);
-        return Promise.resolve(restRes.result!.id);
+        return;
       }
       case 400: {
         core.setFailed("Failed to run scan");
-        break;
+        return;
       }
       case 401: {
         core.setFailed("Failed to log in with provided credentials");
-        break;
+        return;
       }
       case 403: {
         core.setFailed(
           "The account doesn't have any permissions for a resource"
         );
-        break;
+        return;
       }
     }
   } catch (err) {
     core.setFailed("Failed: " + err.message);
   }
-
-  return Promise.reject();
 }
 
 interface NewScan {
@@ -89,7 +83,7 @@ interface NewScan {
   hostsFilter: string[] | null;
 }
 
-async function create(token: string, scan: NewScan): Promise<string> {
+async function create(token: string, scan: NewScan) {
   try {
     console.debug(scan);
     let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
@@ -106,30 +100,26 @@ async function create(token: string, scan: NewScan): Promise<string> {
         console.log(`Success. Scan was created on ${url}`);
         core.setOutput("url", url);
         core.setOutput("id", id);
-        return Promise.resolve(restRes.result!.id);
+        return;
       }
       case 400: {
         core.setFailed("Failed to run scan");
-        return Promise.reject("Failed to run scan");
+        return;
       }
       case 401: {
         core.setFailed("Failed to log in with provided credentials");
-        return Promise.reject("Failed to log in with provided credentials");
+        return;
       }
       case 403: {
         core.setFailed(
           "The account doesn't have any permissions for a resource"
         );
-        return Promise.reject(
-          "The account doesn't have any permissions for a resource"
-        );
+        return;
       }
     }
   } catch (err) {
     core.setFailed("Failed: " + err.message);
   }
-
-  return Promise.reject();
 }
 
 if (restartScanID) {

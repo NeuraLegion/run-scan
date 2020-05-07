@@ -1811,26 +1811,25 @@ function retest(token, uuid, name) {
                     let url = `https://nexploit.app/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
                     console.log(`Success. Scan was created on ${url}`);
                     core.setOutput("url", url);
-                    return Promise.resolve(restRes.result.id);
+                    return;
                 }
                 case 400: {
                     core.setFailed("Failed to run scan");
-                    break;
+                    return;
                 }
                 case 401: {
                     core.setFailed("Failed to log in with provided credentials");
-                    break;
+                    return;
                 }
                 case 403: {
                     core.setFailed("The account doesn't have any permissions for a resource");
-                    break;
+                    return;
                 }
             }
         }
         catch (err) {
             core.setFailed("Failed: " + err.message);
         }
-        return Promise.reject();
     });
 }
 function create(token, scan) {
@@ -1846,26 +1845,25 @@ function create(token, scan) {
                     console.log(`Success. Scan was created on ${url}`);
                     core.setOutput("url", url);
                     core.setOutput("id", id);
-                    return Promise.resolve(restRes.result.id);
+                    return;
                 }
                 case 400: {
                     core.setFailed("Failed to run scan");
-                    return Promise.reject("Failed to run scan");
+                    return;
                 }
                 case 401: {
                     core.setFailed("Failed to log in with provided credentials");
-                    return Promise.reject("Failed to log in with provided credentials");
+                    return;
                 }
                 case 403: {
                     core.setFailed("The account doesn't have any permissions for a resource");
-                    return Promise.reject("The account doesn't have any permissions for a resource");
+                    return;
                 }
             }
         }
         catch (err) {
             core.setFailed("Failed: " + err.message);
         }
-        return Promise.reject();
     });
 }
 if (restartScanID) {
