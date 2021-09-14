@@ -95,7 +95,7 @@ Url of the resulting scan
 steps:
     - name: Start Nexploit Scan
       id: start
-      uses: NeuraLegion/run-scan@v1
+      uses: NeuraLegion/run-scan@v1.1
       with:
         api_token: ${{ secrets.NEXPLOIT_TOKEN }}
         name: GitHub scan ${{ github.sha }}
@@ -116,7 +116,7 @@ steps:
 steps:
     - name: Start Nexploit Scan
       id: start
-      uses: NeuraLegion/run-scan@v1
+      uses: NeuraLegion/run-scan@v1.1
       with:
         api_token: ${{ secrets.NEXPLOIT_TOKEN }}
         name: GitHub scan ${{ github.sha }}
