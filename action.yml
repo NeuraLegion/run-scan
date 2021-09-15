@@ -1,4 +1,4 @@
-name: 'Nexploit Scan'
+name: 'Run a Nexploit Scan'
 description: 'Run a Nexploit scan right in GitHub Action'
 branding:
   icon: 'upload-cloud'
