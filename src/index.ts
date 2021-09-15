@@ -24,7 +24,7 @@ function getArray(name: string): string[] | null {
       return null;
     }
   } catch (err) {
-    core.debug(name + " failed: " + err.message + " => " + input);
+    core.debug(name + ` failed: ${err}` + " => " + input);
     return null;
   }
 }
@@ -70,7 +70,7 @@ async function retest(token: string, uuid: string, name?: string) {
       }
     }
   } catch (err) {
-    core.setFailed("Failed: " + err.message);
+    core.setFailed(`Failed: ${err}`);
   }
 }
 
@@ -118,7 +118,7 @@ async function create(token: string, scan: NewScan) {
       }
     }
   } catch (err) {
-    core.setFailed("Failed: " + err.message);
+    core.setFailed(`Failed: ${err}`);
   }
 }
 
