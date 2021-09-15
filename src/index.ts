@@ -12,24 +12,26 @@ const hostsFilter = getArray("hosts_filter");
 const type = core.getInput("type");
 const hostname = core.getInput("hostname");
 
-function getArray(name: string): string[] | null {
+function getArray(name: string): string[] | undefined {
   const input = core.getInput(name);
 
   try {
     const elements = JSON.parse(input);
 
     if (elements instanceof Array) {
-      return elements.length == 0 ? null : elements;
+      return elements.length == 0 ? undefined : elements;
     } else {
-      return null;
+      return undefined;
     }
   } catch (err) {
-    core.debug(name + " failed: " + err.message + " => " + input);
-    return null;
+    core.debug(name + ` failed: ${err}` + " => " + input);
+    return undefined;
   }
 }
 
-const baseUrl = hostname ? `https://$hostname` : "https://nexploit.app";
+const baseUrl = hostname ? `https://${hostname}` : 'https://nexploit.app';
+console.log(baseUrl);
+
 let restc: rm.RestClient = new rm.RestClient("GitHub Actions", baseUrl);
 
 interface Scan {
@@ -47,78 +49,49 @@ async function retest(token: string, uuid: string, name?: string) {
       options
     );
 
-    switch (restRes.statusCode) {
-      case 201: {
-        let url = `https://nexploit.app/scans/${restRes.result?.id}`;
-        console.log(`Success. Scan was created on ${url}`);
-        core.setOutput("url", url);
-        return;
-      }
-      case 400: {
-        core.setFailed("Failed to run scan");
-        return;
-      }
-      case 401: {
-        core.setFailed("Failed to log in with provided credentials");
-        return;
-      }
-      case 403: {
-        core.setFailed(
-          "The account doesn't have any permissions for a resource"
-        );
-        return;
-      }
+    if (restRes.statusCode < 300) {
+      let url = `${baseUrl}/scans/${restRes.result?.id}`;
+      console.log(`Success. Scan was created on ${url}`);
+      core.setOutput("url", url);
+    } else {
+      core.setFailed(`Failed retest. Status code: ${restRes.statusCode}`);
     }
-  } catch (err) {
-    core.setFailed("Failed: " + err.message);
+  } catch (err: any) {
+    core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
   }
 }
 
 interface NewScan {
   name: string;
-  discoveryTypes: string[] | null;
-  module: string | null;
-  crawlerUrls: string[] | null;
-  fileId: string | null;
-  hostsFilter: string[] | null;
+  discoveryTypes: string[];
+  module?: string;
+  crawlerUrls?: string[];
+  fileId?: string;
+  hostsFilter?: string[];
 }
 
 async function create(token: string, scan: NewScan) {
+  let restRes: rm.IRestResponse<Scan>;
   try {
     console.debug(scan);
     let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-    let restRes: rm.IRestResponse<Scan> = await restc.create<Scan>(
+    restRes = await restc.create<Scan>(
       "api/v1/scans/",
       scan,
       options
     );
 
-    switch (restRes.statusCode) {
-      case 201: {
-        let id = restRes.result!.id;
-        let url = `https://nexploit.app/scans/${id}`;
-        console.log(`Success. Scan was created on ${url}`);
-        core.setOutput("url", url);
-        core.setOutput("id", id);
-        return;
-      }
-      case 400: {
-        core.setFailed("Failed to run scan");
-        return;
-      }
-      case 401: {
-        core.setFailed("Failed to log in with provided credentials");
-        return;
-      }
-      case 403: {
-        core.setFailed(
-          "The account doesn't have any permissions for a resource"
-        );
-        return;
-      }
+    if (restRes.statusCode < 300) {
+      let id = restRes.result!.id;
+      let url = `${baseUrl}/scans/${id}`;
+      console.log(`Success. Scan was created on ${url}`);
+      core.setOutput("url", url);
+      core.setOutput("id", id);
+    } else {
+      core.setFailed(`Failed create scan. Status code: ${restRes.statusCode}`);
     }
-  } catch (err) {
-    core.setFailed("Failed: " + err.message);
+  } catch (err: any) {
+    core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
   }
 }
 
@@ -140,7 +113,7 @@ if (restartScanID) {
     );
   }
 } else {
-  const module = module_in || "core";
+  const module = module_in || "dast";
   const discoveryTypes = discoveryTypes_in || ["archive"];
 
   create(apiToken, {
