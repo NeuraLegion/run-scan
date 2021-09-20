@@ -16,12 +16,11 @@ jobs:
 #       restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
         name: GitHub scan ${{ github.sha }}
         discovery_types: |
-          [ "crawler", "archive" ]
+          [ "crawler" ]
         crawler_urls: |
-          [ "https://juice-shop.herokuapp.com" ]
-        file_id: LiYknMYSdbSZbqgMaC9Sj
+          [ "https://brokencrystals.com" ]
         hosts_filter: |
-          [ ]
+          [ "https://brokencrystals.com" ]
     - name: Get the output scan url
       run: |
         echo "The scan ${{ steps.start.outputs.id }} was started on
