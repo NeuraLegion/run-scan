@@ -1504,7 +1504,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(68));
 const rm = __importStar(__webpack_require__(667));
-core.setOutput('Start', '===============================================================================================================');
+core.setFailed('Start');
 const apiToken = core.getInput("api_token");
 const restartScanID = core.getInput("restart_scan");
 const name = core.getInput("name");
