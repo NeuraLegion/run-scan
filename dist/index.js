@@ -1569,8 +1569,17 @@ function create(token, scan) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // console.log(scan);
-            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-            let restRes = yield restc.create("api/v1/scans/", scan, options);
+            // let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
+            const restRes = {
+                statusCode: 201,
+                result: null,
+                headers: {}
+            };
+            // let restRes: rm.IRestResponse<Scan> = await restc.create<Scan>(
+            //   "api/v1/scans/",
+            //   scan,
+            //   options
+            // );
             switch (restRes.statusCode) {
                 case 201: {
                     let id = restRes.result.id;
