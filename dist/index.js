@@ -1504,6 +1504,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(68));
 const rm = __importStar(__webpack_require__(667));
+core.setOutput('Start', '===============================================================================================================');
 const apiToken = core.getInput("api_token");
 const restartScanID = core.getInput("restart_scan");
 const name = core.getInput("name");
@@ -1514,7 +1515,7 @@ const module_in = core.getInput("module");
 const hostsFilter = getArray("hosts_filter");
 const type = core.getInput("type");
 const hostname = core.getInput("hostname");
-core.setOutput('Test', '===============================================================================================================');
+core.setOutput('Variables were assigned', '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
 function getArray(name) {
     const input = core.getInput(name);
     try {
