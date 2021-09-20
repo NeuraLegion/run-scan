@@ -20,7 +20,7 @@ jobs:
         crawler_urls: |
           [ "https://brokencrystals.com" ]
         hosts_filter: |
-          [ "https://brokencrystals.com" ]
+          [ ]
     - name: Get the output scan url
       run: |
         echo "The scan ${{ steps.start.outputs.id }} was started on
