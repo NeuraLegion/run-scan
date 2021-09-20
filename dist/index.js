@@ -1568,7 +1568,7 @@ function retest(token, uuid, name) {
 function create(token, scan) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            console.debug(scan);
+            console.log(scan);
             let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
             let restRes = yield restc.create("api/v1/scans/", scan, options);
             switch (restRes.statusCode) {
@@ -1615,7 +1615,6 @@ if (restartScanID) {
 else {
     const module = module_in || "core";
     const discoveryTypes = discoveryTypes_in || ["archive"];
-    core.debug('This is Debug');
     create(apiToken, {
         name,
         discoveryTypes,
