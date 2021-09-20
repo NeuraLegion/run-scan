@@ -1615,6 +1615,7 @@ if (restartScanID) {
 else {
     const module = module_in || "core";
     const discoveryTypes = discoveryTypes_in || ["archive"];
+    core.debug('This is Debug');
     create(apiToken, {
         name,
         discoveryTypes,
