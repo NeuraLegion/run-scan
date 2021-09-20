@@ -1561,7 +1561,7 @@ function retest(token, uuid, name) {
             }
         }
         catch (err) {
-            core.setFailed(`Failed: ${err}`);
+            core.setFailed(`Retest failed: ${err}`);
         }
     });
 }
@@ -1595,7 +1595,7 @@ function create(token, scan) {
             }
         }
         catch (err) {
-            core.setFailed(`Failed: ${err}`);
+            core.setFailed(`Create test failed: ${err}`);
         }
     });
 }
