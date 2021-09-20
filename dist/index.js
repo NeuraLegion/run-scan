@@ -1514,6 +1514,7 @@ const module_in = core.getInput("module");
 const hostsFilter = getArray("hosts_filter");
 const type = core.getInput("type");
 const hostname = core.getInput("hostname");
+core.debug('===============================================================================================================');
 function getArray(name) {
     const input = core.getInput(name);
     try {
