@@ -1,63 +1,267 @@
-module.exports =
-/******/ (function(modules, runtime) { // webpackBootstrap
-/******/ 	"use strict";
-/******/ 	// The module cache
-/******/ 	var installedModules = {};
-/******/
-/******/ 	// The require function
-/******/ 	function __webpack_require__(moduleId) {
-/******/
-/******/ 		// Check if module is in cache
-/******/ 		if(installedModules[moduleId]) {
-/******/ 			return installedModules[moduleId].exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = installedModules[moduleId] = {
-/******/ 			i: moduleId,
-/******/ 			l: false,
-/******/ 			exports: {}
-/******/ 		};
-/******/
-/******/ 		// Execute the module function
-/******/ 		var threw = true;
-/******/ 		try {
-/******/ 			modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-/******/ 			threw = false;
-/******/ 		} finally {
-/******/ 			if(threw) delete installedModules[moduleId];
-/******/ 		}
-/******/
-/******/ 		// Flag the module as loaded
-/******/ 		module.l = true;
-/******/
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/
-/******/
-/******/ 	__webpack_require__.ab = __dirname + "/";
-/******/
-/******/ 	// the startup function
-/******/ 	function startup() {
-/******/ 		// Load entry module and return exports
-/******/ 		return __webpack_require__(555);
-/******/ 	};
-/******/
-/******/ 	// run startup
-/******/ 	return startup();
-/******/ })
-/************************************************************************/
-/******/ ({
+/******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ({
 
-/***/ 16:
-/***/ (function(module) {
+/***/ 328:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
-module.exports = require("tls");
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const core = __importStar(__nccwpck_require__(964));
+const rm = __importStar(__nccwpck_require__(235));
+const apiToken = core.getInput("api_token");
+const restartScanID = core.getInput("restart_scan");
+const name = core.getInput("name");
+const fileId = core.getInput("file_id");
+const crawlerUrls = getArray("crawler_urls");
+const discoveryTypes_in = getArray("discovery_types");
+const module_in = core.getInput("module");
+const hostsFilter = getArray("hosts_filter");
+const type = core.getInput("type");
+const hostname = core.getInput("hostname");
+function getArray(name) {
+    const input = core.getInput(name);
+    try {
+        const elements = JSON.parse(input);
+        if (elements instanceof Array) {
+            return elements.length == 0 ? null : elements;
+        }
+        else {
+            return null;
+        }
+    }
+    catch (err) {
+        core.debug(name + ` failed: ${err}` + " => " + input);
+        return null;
+    }
+}
+const baseUrl = hostname ? `https://$hostname` : "https://nexploit.app";
+let restc = new rm.RestClient("GitHub Actions", baseUrl);
+function retest(token, uuid, name) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        let scan_name = name || "GitHub Actions";
+        try {
+            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
+            let restRes = yield restc.create(`api/v1/scans/${uuid}/retest`, { name: scan_name }, options);
+            switch (restRes.statusCode) {
+                case 201: {
+                    let url = `https://nexploit.app/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
+                    console.log(`Success. Scan was created on ${url}`);
+                    core.setOutput("url", url);
+                    return;
+                }
+                case 400: {
+                    core.setFailed("Failed to run scan");
+                    return;
+                }
+                case 401: {
+                    core.setFailed("Failed to log in with provided credentials");
+                    return;
+                }
+                case 403: {
+                    core.setFailed("The account doesn't have any permissions for a resource");
+                    return;
+                }
+            }
+        }
+        catch (err) {
+            core.setFailed(`Failed: ${err}`);
+        }
+    });
+}
+function create(token, scan) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            console.debug(scan);
+            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
+            let restRes = yield restc.create("api/v1/scans/", scan, options);
+            switch (restRes.statusCode) {
+                case 201: {
+                    let id = restRes.result.id;
+                    let url = `https://nexploit.app/scans/${id}`;
+                    console.log(`Success. Scan was created on ${url}`);
+                    core.setOutput("url", url);
+                    core.setOutput("id", id);
+                    return;
+                }
+                case 400: {
+                    core.setFailed("Failed to run scan");
+                    return;
+                }
+                case 401: {
+                    core.setFailed("Failed to log in with provided credentials");
+                    return;
+                }
+                case 403: {
+                    core.setFailed("The account doesn't have any permissions for a resource");
+                    return;
+                }
+            }
+        }
+        catch (err) {
+            core.setFailed(`Failed: ${err}`);
+        }
+    });
+}
+if (restartScanID) {
+    if (!(fileId ||
+        crawlerUrls ||
+        discoveryTypes_in ||
+        module_in ||
+        hostsFilter ||
+        type)) {
+        retest(apiToken, restartScanID, name);
+    }
+    else {
+        core.setFailed("You don't need parameters, other than api_token, restart_scan and name, if you just want to restart an existing scan");
+    }
+}
+else {
+    const module = module_in || "core";
+    const discoveryTypes = discoveryTypes_in || ["archive"];
+    create(apiToken, {
+        name,
+        discoveryTypes,
+        module,
+        crawlerUrls,
+        fileId,
+        hostsFilter,
+    });
+}
+
 
 /***/ }),
 
-/***/ 68:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
+/***/ 306:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issue = exports.issueCommand = void 0;
+const os = __importStar(__nccwpck_require__(87));
+const utils_1 = __nccwpck_require__(496);
+/**
+ * Commands
+ *
+ * Command Format:
+ *   ::name key=value,key=value::message
+ *
+ * Examples:
+ *   ::warning::This is the message
+ *   ::set-env name=MY_VAR::some value
+ */
+function issueCommand(command, properties, message) {
+    const cmd = new Command(command, properties, message);
+    process.stdout.write(cmd.toString() + os.EOL);
+}
+exports.issueCommand = issueCommand;
+function issue(name, message = '') {
+    issueCommand(name, {}, message);
+}
+exports.issue = issue;
+const CMD_STRING = '::';
+class Command {
+    constructor(command, properties, message) {
+        if (!command) {
+            command = 'missing.command';
+        }
+        this.command = command;
+        this.properties = properties;
+        this.message = message;
+    }
+    toString() {
+        let cmdStr = CMD_STRING + this.command;
+        if (this.properties && Object.keys(this.properties).length > 0) {
+            cmdStr += ' ';
+            let first = true;
+            for (const key in this.properties) {
+                if (this.properties.hasOwnProperty(key)) {
+                    const val = this.properties[key];
+                    if (val) {
+                        if (first) {
+                            first = false;
+                        }
+                        else {
+                            cmdStr += ',';
+                        }
+                        cmdStr += `${key}=${escapeProperty(val)}`;
+                    }
+                }
+            }
+        }
+        cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
+        return cmdStr;
+    }
+}
+function escapeData(s) {
+    return utils_1.toCommandValue(s)
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A');
+}
+function escapeProperty(s) {
+    return utils_1.toCommandValue(s)
+        .replace(/%/g, '%25')
+        .replace(/\r/g, '%0D')
+        .replace(/\n/g, '%0A')
+        .replace(/:/g, '%3A')
+        .replace(/,/g, '%2C');
+}
+//# sourceMappingURL=command.js.map
+
+/***/ }),
+
+/***/ 964:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
@@ -89,13 +293,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
-const command_1 = __webpack_require__(955);
-const file_command_1 = __webpack_require__(832);
-const utils_1 = __webpack_require__(645);
-const os = __importStar(__webpack_require__(87));
-const path = __importStar(__webpack_require__(622));
+const command_1 = __nccwpck_require__(306);
+const file_command_1 = __nccwpck_require__(85);
+const utils_1 = __nccwpck_require__(496);
+const os = __importStar(__nccwpck_require__(87));
+const path = __importStar(__nccwpck_require__(622));
 /**
  * The code to exit an action
  */
@@ -368,14 +572,438 @@ exports.getState = getState;
 
 /***/ }),
 
-/***/ 83:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ 85:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// For internal use, subject to change.
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.issueCommand = void 0;
+// We use any as a valid input type
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const fs = __importStar(__nccwpck_require__(747));
+const os = __importStar(__nccwpck_require__(87));
+const utils_1 = __nccwpck_require__(496);
+function issueCommand(command, message) {
+    const filePath = process.env[`GITHUB_${command}`];
+    if (!filePath) {
+        throw new Error(`Unable to find environment variable for file command ${command}`);
+    }
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`Missing file at path: ${filePath}`);
+    }
+    fs.appendFileSync(filePath, `${utils_1.toCommandValue(message)}${os.EOL}`, {
+        encoding: 'utf8'
+    });
+}
+exports.issueCommand = issueCommand;
+//# sourceMappingURL=file-command.js.map
+
+/***/ }),
+
+/***/ 496:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+// We use any as a valid input type
+/* eslint-disable @typescript-eslint/no-explicit-any */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toCommandProperties = exports.toCommandValue = void 0;
+/**
+ * Sanitizes an input into a string so it can be passed into issueCommand safely
+ * @param input input to sanitize into a string
+ */
+function toCommandValue(input) {
+    if (input === null || input === undefined) {
+        return '';
+    }
+    else if (typeof input === 'string' || input instanceof String) {
+        return input;
+    }
+    return JSON.stringify(input);
+}
+exports.toCommandValue = toCommandValue;
+/**
+ *
+ * @param annotationProperties
+ * @returns The command properties to send with the actual annotation command
+ * See IssueCommandProperties: https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionCommandManager.cs#L646
+ */
+function toCommandProperties(annotationProperties) {
+    if (!Object.keys(annotationProperties).length) {
+        return {};
+    }
+    return {
+        title: annotationProperties.title,
+        line: annotationProperties.startLine,
+        endLine: annotationProperties.endLine,
+        col: annotationProperties.startColumn,
+        endColumn: annotationProperties.endColumn
+    };
+}
+exports.toCommandProperties = toCommandProperties;
+//# sourceMappingURL=utils.js.map
+
+/***/ }),
+
+/***/ 602:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-var utils = __webpack_require__(271);
-var formats = __webpack_require__(929);
+var replace = String.prototype.replace;
+var percentTwenties = /%20/g;
+
+var util = __nccwpck_require__(971);
+
+var Format = {
+    RFC1738: 'RFC1738',
+    RFC3986: 'RFC3986'
+};
+
+module.exports = util.assign(
+    {
+        'default': Format.RFC3986,
+        formatters: {
+            RFC1738: function (value) {
+                return replace.call(value, percentTwenties, '+');
+            },
+            RFC3986: function (value) {
+                return String(value);
+            }
+        }
+    },
+    Format
+);
+
+
+/***/ }),
+
+/***/ 763:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+var stringify = __nccwpck_require__(764);
+var parse = __nccwpck_require__(254);
+var formats = __nccwpck_require__(602);
+
+module.exports = {
+    formats: formats,
+    parse: parse,
+    stringify: stringify
+};
+
+
+/***/ }),
+
+/***/ 254:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+var utils = __nccwpck_require__(971);
+
+var has = Object.prototype.hasOwnProperty;
+var isArray = Array.isArray;
+
+var defaults = {
+    allowDots: false,
+    allowPrototypes: false,
+    arrayLimit: 20,
+    charset: 'utf-8',
+    charsetSentinel: false,
+    comma: false,
+    decoder: utils.decode,
+    delimiter: '&',
+    depth: 5,
+    ignoreQueryPrefix: false,
+    interpretNumericEntities: false,
+    parameterLimit: 1000,
+    parseArrays: true,
+    plainObjects: false,
+    strictNullHandling: false
+};
+
+var interpretNumericEntities = function (str) {
+    return str.replace(/&#(\d+);/g, function ($0, numberStr) {
+        return String.fromCharCode(parseInt(numberStr, 10));
+    });
+};
+
+var parseArrayValue = function (val, options) {
+    if (val && typeof val === 'string' && options.comma && val.indexOf(',') > -1) {
+        return val.split(',');
+    }
+
+    return val;
+};
+
+var maybeMap = function maybeMap(val, fn) {
+    if (isArray(val)) {
+        var mapped = [];
+        for (var i = 0; i < val.length; i += 1) {
+            mapped.push(fn(val[i]));
+        }
+        return mapped;
+    }
+    return fn(val);
+};
+
+// This is what browsers will submit when the ✓ character occurs in an
+// application/x-www-form-urlencoded body and the encoding of the page containing
+// the form is iso-8859-1, or when the submitted form has an accept-charset
+// attribute of iso-8859-1. Presumably also with other charsets that do not contain
+// the ✓ character, such as us-ascii.
+var isoSentinel = 'utf8=%26%2310003%3B'; // encodeURIComponent('&#10003;')
+
+// These are the percent-encoded utf-8 octets representing a checkmark, indicating that the request actually is utf-8 encoded.
+var charsetSentinel = 'utf8=%E2%9C%93'; // encodeURIComponent('✓')
+
+var parseValues = function parseQueryStringValues(str, options) {
+    var obj = {};
+    var cleanStr = options.ignoreQueryPrefix ? str.replace(/^\?/, '') : str;
+    var limit = options.parameterLimit === Infinity ? undefined : options.parameterLimit;
+    var parts = cleanStr.split(options.delimiter, limit);
+    var skipIndex = -1; // Keep track of where the utf8 sentinel was found
+    var i;
+
+    var charset = options.charset;
+    if (options.charsetSentinel) {
+        for (i = 0; i < parts.length; ++i) {
+            if (parts[i].indexOf('utf8=') === 0) {
+                if (parts[i] === charsetSentinel) {
+                    charset = 'utf-8';
+                } else if (parts[i] === isoSentinel) {
+                    charset = 'iso-8859-1';
+                }
+                skipIndex = i;
+                i = parts.length; // The eslint settings do not allow break;
+            }
+        }
+    }
+
+    for (i = 0; i < parts.length; ++i) {
+        if (i === skipIndex) {
+            continue;
+        }
+        var part = parts[i];
+
+        var bracketEqualsPos = part.indexOf(']=');
+        var pos = bracketEqualsPos === -1 ? part.indexOf('=') : bracketEqualsPos + 1;
+
+        var key, val;
+        if (pos === -1) {
+            key = options.decoder(part, defaults.decoder, charset, 'key');
+            val = options.strictNullHandling ? null : '';
+        } else {
+            key = options.decoder(part.slice(0, pos), defaults.decoder, charset, 'key');
+            val = maybeMap(
+                parseArrayValue(part.slice(pos + 1), options),
+                function (encodedVal) {
+                    return options.decoder(encodedVal, defaults.decoder, charset, 'value');
+                }
+            );
+        }
+
+        if (val && options.interpretNumericEntities && charset === 'iso-8859-1') {
+            val = interpretNumericEntities(val);
+        }
+
+        if (part.indexOf('[]=') > -1) {
+            val = isArray(val) ? [val] : val;
+        }
+
+        if (has.call(obj, key)) {
+            obj[key] = utils.combine(obj[key], val);
+        } else {
+            obj[key] = val;
+        }
+    }
+
+    return obj;
+};
+
+var parseObject = function (chain, val, options, valuesParsed) {
+    var leaf = valuesParsed ? val : parseArrayValue(val, options);
+
+    for (var i = chain.length - 1; i >= 0; --i) {
+        var obj;
+        var root = chain[i];
+
+        if (root === '[]' && options.parseArrays) {
+            obj = [].concat(leaf);
+        } else {
+            obj = options.plainObjects ? Object.create(null) : {};
+            var cleanRoot = root.charAt(0) === '[' && root.charAt(root.length - 1) === ']' ? root.slice(1, -1) : root;
+            var index = parseInt(cleanRoot, 10);
+            if (!options.parseArrays && cleanRoot === '') {
+                obj = { 0: leaf };
+            } else if (
+                !isNaN(index)
+                && root !== cleanRoot
+                && String(index) === cleanRoot
+                && index >= 0
+                && (options.parseArrays && index <= options.arrayLimit)
+            ) {
+                obj = [];
+                obj[index] = leaf;
+            } else {
+                obj[cleanRoot] = leaf;
+            }
+        }
+
+        leaf = obj; // eslint-disable-line no-param-reassign
+    }
+
+    return leaf;
+};
+
+var parseKeys = function parseQueryStringKeys(givenKey, val, options, valuesParsed) {
+    if (!givenKey) {
+        return;
+    }
+
+    // Transform dot notation to bracket notation
+    var key = options.allowDots ? givenKey.replace(/\.([^.[]+)/g, '[$1]') : givenKey;
+
+    // The regex chunks
+
+    var brackets = /(\[[^[\]]*])/;
+    var child = /(\[[^[\]]*])/g;
+
+    // Get the parent
+
+    var segment = options.depth > 0 && brackets.exec(key);
+    var parent = segment ? key.slice(0, segment.index) : key;
+
+    // Stash the parent if it exists
+
+    var keys = [];
+    if (parent) {
+        // If we aren't using plain objects, optionally prefix keys that would overwrite object prototype properties
+        if (!options.plainObjects && has.call(Object.prototype, parent)) {
+            if (!options.allowPrototypes) {
+                return;
+            }
+        }
+
+        keys.push(parent);
+    }
+
+    // Loop through children appending to the array until we hit depth
+
+    var i = 0;
+    while (options.depth > 0 && (segment = child.exec(key)) !== null && i < options.depth) {
+        i += 1;
+        if (!options.plainObjects && has.call(Object.prototype, segment[1].slice(1, -1))) {
+            if (!options.allowPrototypes) {
+                return;
+            }
+        }
+        keys.push(segment[1]);
+    }
+
+    // If there's a remainder, just add whatever is left
+
+    if (segment) {
+        keys.push('[' + key.slice(segment.index) + ']');
+    }
+
+    return parseObject(keys, val, options, valuesParsed);
+};
+
+var normalizeParseOptions = function normalizeParseOptions(opts) {
+    if (!opts) {
+        return defaults;
+    }
+
+    if (opts.decoder !== null && opts.decoder !== undefined && typeof opts.decoder !== 'function') {
+        throw new TypeError('Decoder has to be a function.');
+    }
+
+    if (typeof opts.charset !== 'undefined' && opts.charset !== 'utf-8' && opts.charset !== 'iso-8859-1') {
+        throw new TypeError('The charset option must be either utf-8, iso-8859-1, or undefined');
+    }
+    var charset = typeof opts.charset === 'undefined' ? defaults.charset : opts.charset;
+
+    return {
+        allowDots: typeof opts.allowDots === 'undefined' ? defaults.allowDots : !!opts.allowDots,
+        allowPrototypes: typeof opts.allowPrototypes === 'boolean' ? opts.allowPrototypes : defaults.allowPrototypes,
+        arrayLimit: typeof opts.arrayLimit === 'number' ? opts.arrayLimit : defaults.arrayLimit,
+        charset: charset,
+        charsetSentinel: typeof opts.charsetSentinel === 'boolean' ? opts.charsetSentinel : defaults.charsetSentinel,
+        comma: typeof opts.comma === 'boolean' ? opts.comma : defaults.comma,
+        decoder: typeof opts.decoder === 'function' ? opts.decoder : defaults.decoder,
+        delimiter: typeof opts.delimiter === 'string' || utils.isRegExp(opts.delimiter) ? opts.delimiter : defaults.delimiter,
+        // eslint-disable-next-line no-implicit-coercion, no-extra-parens
+        depth: (typeof opts.depth === 'number' || opts.depth === false) ? +opts.depth : defaults.depth,
+        ignoreQueryPrefix: opts.ignoreQueryPrefix === true,
+        interpretNumericEntities: typeof opts.interpretNumericEntities === 'boolean' ? opts.interpretNumericEntities : defaults.interpretNumericEntities,
+        parameterLimit: typeof opts.parameterLimit === 'number' ? opts.parameterLimit : defaults.parameterLimit,
+        parseArrays: opts.parseArrays !== false,
+        plainObjects: typeof opts.plainObjects === 'boolean' ? opts.plainObjects : defaults.plainObjects,
+        strictNullHandling: typeof opts.strictNullHandling === 'boolean' ? opts.strictNullHandling : defaults.strictNullHandling
+    };
+};
+
+module.exports = function (str, opts) {
+    var options = normalizeParseOptions(opts);
+
+    if (str === '' || str === null || typeof str === 'undefined') {
+        return options.plainObjects ? Object.create(null) : {};
+    }
+
+    var tempObj = typeof str === 'string' ? parseValues(str, options) : str;
+    var obj = options.plainObjects ? Object.create(null) : {};
+
+    // Iterate over the keys and setup the new object
+
+    var keys = Object.keys(tempObj);
+    for (var i = 0; i < keys.length; ++i) {
+        var key = keys[i];
+        var newObj = parseKeys(key, tempObj[key], options, typeof str === 'string');
+        obj = utils.merge(obj, newObj, options);
+    }
+
+    return utils.compact(obj);
+};
+
+
+/***/ }),
+
+/***/ 764:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+var utils = __nccwpck_require__(971);
+var formats = __nccwpck_require__(602);
 var has = Object.prototype.hasOwnProperty;
 
 var arrayPrefixGenerators = {
@@ -655,22 +1283,8 @@ module.exports = function (object, opts) {
 
 /***/ }),
 
-/***/ 87:
-/***/ (function(module) {
-
-module.exports = require("os");
-
-/***/ }),
-
-/***/ 211:
-/***/ (function(module) {
-
-module.exports = require("https");
-
-/***/ }),
-
-/***/ 271:
-/***/ (function(module) {
+/***/ 971:
+/***/ ((module) => {
 
 "use strict";
 
@@ -913,26 +1527,27 @@ module.exports = {
 
 /***/ }),
 
-/***/ 357:
-/***/ (function(module) {
+/***/ 379:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-module.exports = require("assert");
+module.exports = __nccwpck_require__(234);
+
 
 /***/ }),
 
-/***/ 376:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
+/***/ 234:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 
-var net = __webpack_require__(631);
-var tls = __webpack_require__(16);
-var http = __webpack_require__(605);
-var https = __webpack_require__(211);
-var events = __webpack_require__(614);
-var assert = __webpack_require__(357);
-var util = __webpack_require__(669);
+var net = __nccwpck_require__(631);
+var tls = __nccwpck_require__(16);
+var http = __nccwpck_require__(605);
+var https = __nccwpck_require__(211);
+var events = __nccwpck_require__(614);
+var assert = __nccwpck_require__(357);
+var util = __nccwpck_require__(669);
 
 
 exports.httpOverHttp = httpOverHttp;
@@ -1192,452 +1807,8 @@ exports.debug = debug; // for test
 
 /***/ }),
 
-/***/ 549:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-"use strict";
-
-
-var utils = __webpack_require__(271);
-
-var has = Object.prototype.hasOwnProperty;
-var isArray = Array.isArray;
-
-var defaults = {
-    allowDots: false,
-    allowPrototypes: false,
-    arrayLimit: 20,
-    charset: 'utf-8',
-    charsetSentinel: false,
-    comma: false,
-    decoder: utils.decode,
-    delimiter: '&',
-    depth: 5,
-    ignoreQueryPrefix: false,
-    interpretNumericEntities: false,
-    parameterLimit: 1000,
-    parseArrays: true,
-    plainObjects: false,
-    strictNullHandling: false
-};
-
-var interpretNumericEntities = function (str) {
-    return str.replace(/&#(\d+);/g, function ($0, numberStr) {
-        return String.fromCharCode(parseInt(numberStr, 10));
-    });
-};
-
-var parseArrayValue = function (val, options) {
-    if (val && typeof val === 'string' && options.comma && val.indexOf(',') > -1) {
-        return val.split(',');
-    }
-
-    return val;
-};
-
-var maybeMap = function maybeMap(val, fn) {
-    if (isArray(val)) {
-        var mapped = [];
-        for (var i = 0; i < val.length; i += 1) {
-            mapped.push(fn(val[i]));
-        }
-        return mapped;
-    }
-    return fn(val);
-};
-
-// This is what browsers will submit when the ✓ character occurs in an
-// application/x-www-form-urlencoded body and the encoding of the page containing
-// the form is iso-8859-1, or when the submitted form has an accept-charset
-// attribute of iso-8859-1. Presumably also with other charsets that do not contain
-// the ✓ character, such as us-ascii.
-var isoSentinel = 'utf8=%26%2310003%3B'; // encodeURIComponent('&#10003;')
-
-// These are the percent-encoded utf-8 octets representing a checkmark, indicating that the request actually is utf-8 encoded.
-var charsetSentinel = 'utf8=%E2%9C%93'; // encodeURIComponent('✓')
-
-var parseValues = function parseQueryStringValues(str, options) {
-    var obj = {};
-    var cleanStr = options.ignoreQueryPrefix ? str.replace(/^\?/, '') : str;
-    var limit = options.parameterLimit === Infinity ? undefined : options.parameterLimit;
-    var parts = cleanStr.split(options.delimiter, limit);
-    var skipIndex = -1; // Keep track of where the utf8 sentinel was found
-    var i;
-
-    var charset = options.charset;
-    if (options.charsetSentinel) {
-        for (i = 0; i < parts.length; ++i) {
-            if (parts[i].indexOf('utf8=') === 0) {
-                if (parts[i] === charsetSentinel) {
-                    charset = 'utf-8';
-                } else if (parts[i] === isoSentinel) {
-                    charset = 'iso-8859-1';
-                }
-                skipIndex = i;
-                i = parts.length; // The eslint settings do not allow break;
-            }
-        }
-    }
-
-    for (i = 0; i < parts.length; ++i) {
-        if (i === skipIndex) {
-            continue;
-        }
-        var part = parts[i];
-
-        var bracketEqualsPos = part.indexOf(']=');
-        var pos = bracketEqualsPos === -1 ? part.indexOf('=') : bracketEqualsPos + 1;
-
-        var key, val;
-        if (pos === -1) {
-            key = options.decoder(part, defaults.decoder, charset, 'key');
-            val = options.strictNullHandling ? null : '';
-        } else {
-            key = options.decoder(part.slice(0, pos), defaults.decoder, charset, 'key');
-            val = maybeMap(
-                parseArrayValue(part.slice(pos + 1), options),
-                function (encodedVal) {
-                    return options.decoder(encodedVal, defaults.decoder, charset, 'value');
-                }
-            );
-        }
-
-        if (val && options.interpretNumericEntities && charset === 'iso-8859-1') {
-            val = interpretNumericEntities(val);
-        }
-
-        if (part.indexOf('[]=') > -1) {
-            val = isArray(val) ? [val] : val;
-        }
-
-        if (has.call(obj, key)) {
-            obj[key] = utils.combine(obj[key], val);
-        } else {
-            obj[key] = val;
-        }
-    }
-
-    return obj;
-};
-
-var parseObject = function (chain, val, options, valuesParsed) {
-    var leaf = valuesParsed ? val : parseArrayValue(val, options);
-
-    for (var i = chain.length - 1; i >= 0; --i) {
-        var obj;
-        var root = chain[i];
-
-        if (root === '[]' && options.parseArrays) {
-            obj = [].concat(leaf);
-        } else {
-            obj = options.plainObjects ? Object.create(null) : {};
-            var cleanRoot = root.charAt(0) === '[' && root.charAt(root.length - 1) === ']' ? root.slice(1, -1) : root;
-            var index = parseInt(cleanRoot, 10);
-            if (!options.parseArrays && cleanRoot === '') {
-                obj = { 0: leaf };
-            } else if (
-                !isNaN(index)
-                && root !== cleanRoot
-                && String(index) === cleanRoot
-                && index >= 0
-                && (options.parseArrays && index <= options.arrayLimit)
-            ) {
-                obj = [];
-                obj[index] = leaf;
-            } else {
-                obj[cleanRoot] = leaf;
-            }
-        }
-
-        leaf = obj; // eslint-disable-line no-param-reassign
-    }
-
-    return leaf;
-};
-
-var parseKeys = function parseQueryStringKeys(givenKey, val, options, valuesParsed) {
-    if (!givenKey) {
-        return;
-    }
-
-    // Transform dot notation to bracket notation
-    var key = options.allowDots ? givenKey.replace(/\.([^.[]+)/g, '[$1]') : givenKey;
-
-    // The regex chunks
-
-    var brackets = /(\[[^[\]]*])/;
-    var child = /(\[[^[\]]*])/g;
-
-    // Get the parent
-
-    var segment = options.depth > 0 && brackets.exec(key);
-    var parent = segment ? key.slice(0, segment.index) : key;
-
-    // Stash the parent if it exists
-
-    var keys = [];
-    if (parent) {
-        // If we aren't using plain objects, optionally prefix keys that would overwrite object prototype properties
-        if (!options.plainObjects && has.call(Object.prototype, parent)) {
-            if (!options.allowPrototypes) {
-                return;
-            }
-        }
-
-        keys.push(parent);
-    }
-
-    // Loop through children appending to the array until we hit depth
-
-    var i = 0;
-    while (options.depth > 0 && (segment = child.exec(key)) !== null && i < options.depth) {
-        i += 1;
-        if (!options.plainObjects && has.call(Object.prototype, segment[1].slice(1, -1))) {
-            if (!options.allowPrototypes) {
-                return;
-            }
-        }
-        keys.push(segment[1]);
-    }
-
-    // If there's a remainder, just add whatever is left
-
-    if (segment) {
-        keys.push('[' + key.slice(segment.index) + ']');
-    }
-
-    return parseObject(keys, val, options, valuesParsed);
-};
-
-var normalizeParseOptions = function normalizeParseOptions(opts) {
-    if (!opts) {
-        return defaults;
-    }
-
-    if (opts.decoder !== null && opts.decoder !== undefined && typeof opts.decoder !== 'function') {
-        throw new TypeError('Decoder has to be a function.');
-    }
-
-    if (typeof opts.charset !== 'undefined' && opts.charset !== 'utf-8' && opts.charset !== 'iso-8859-1') {
-        throw new TypeError('The charset option must be either utf-8, iso-8859-1, or undefined');
-    }
-    var charset = typeof opts.charset === 'undefined' ? defaults.charset : opts.charset;
-
-    return {
-        allowDots: typeof opts.allowDots === 'undefined' ? defaults.allowDots : !!opts.allowDots,
-        allowPrototypes: typeof opts.allowPrototypes === 'boolean' ? opts.allowPrototypes : defaults.allowPrototypes,
-        arrayLimit: typeof opts.arrayLimit === 'number' ? opts.arrayLimit : defaults.arrayLimit,
-        charset: charset,
-        charsetSentinel: typeof opts.charsetSentinel === 'boolean' ? opts.charsetSentinel : defaults.charsetSentinel,
-        comma: typeof opts.comma === 'boolean' ? opts.comma : defaults.comma,
-        decoder: typeof opts.decoder === 'function' ? opts.decoder : defaults.decoder,
-        delimiter: typeof opts.delimiter === 'string' || utils.isRegExp(opts.delimiter) ? opts.delimiter : defaults.delimiter,
-        // eslint-disable-next-line no-implicit-coercion, no-extra-parens
-        depth: (typeof opts.depth === 'number' || opts.depth === false) ? +opts.depth : defaults.depth,
-        ignoreQueryPrefix: opts.ignoreQueryPrefix === true,
-        interpretNumericEntities: typeof opts.interpretNumericEntities === 'boolean' ? opts.interpretNumericEntities : defaults.interpretNumericEntities,
-        parameterLimit: typeof opts.parameterLimit === 'number' ? opts.parameterLimit : defaults.parameterLimit,
-        parseArrays: opts.parseArrays !== false,
-        plainObjects: typeof opts.plainObjects === 'boolean' ? opts.plainObjects : defaults.plainObjects,
-        strictNullHandling: typeof opts.strictNullHandling === 'boolean' ? opts.strictNullHandling : defaults.strictNullHandling
-    };
-};
-
-module.exports = function (str, opts) {
-    var options = normalizeParseOptions(opts);
-
-    if (str === '' || str === null || typeof str === 'undefined') {
-        return options.plainObjects ? Object.create(null) : {};
-    }
-
-    var tempObj = typeof str === 'string' ? parseValues(str, options) : str;
-    var obj = options.plainObjects ? Object.create(null) : {};
-
-    // Iterate over the keys and setup the new object
-
-    var keys = Object.keys(tempObj);
-    for (var i = 0; i < keys.length; ++i) {
-        var key = keys[i];
-        var newObj = parseKeys(key, tempObj[key], options, typeof str === 'string');
-        obj = utils.merge(obj, newObj, options);
-    }
-
-    return utils.compact(obj);
-};
-
-
-/***/ }),
-
-/***/ 555:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const core = __importStar(__webpack_require__(68));
-const rm = __importStar(__webpack_require__(667));
-const apiToken = core.getInput("api_token");
-const restartScanID = core.getInput("restart_scan");
-const name = core.getInput("name");
-const fileId = core.getInput("file_id");
-const crawlerUrls = getArray("crawler_urls");
-const discoveryTypes_in = getArray("discovery_types");
-const module_in = core.getInput("module");
-const hostsFilter = getArray("hosts_filter");
-const type = core.getInput("type");
-const hostname = core.getInput("hostname");
-function getArray(name) {
-    const input = core.getInput(name);
-    try {
-        const elements = JSON.parse(input);
-        if (elements instanceof Array) {
-            return elements.length == 0 ? null : elements;
-        }
-        else {
-            return null;
-        }
-    }
-    catch (err) {
-        core.debug(name + ` failed: ${err}` + " => " + input);
-        return null;
-    }
-}
-const baseUrl = hostname ? `https://$hostname` : "https://nexploit.app";
-let restc = new rm.RestClient("GitHub Actions", baseUrl);
-function retest(token, uuid, name) {
-    var _a;
-    return __awaiter(this, void 0, void 0, function* () {
-        let scan_name = name || "GitHub Actions";
-        try {
-            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-            let restRes = yield restc.create(`api/v1/scans/${uuid}/retest`, { name: scan_name }, options);
-            switch (restRes.statusCode) {
-                case 201: {
-                    let url = `https://nexploit.app/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
-                    console.log(`Success. Scan was created on ${url}`);
-                    core.setOutput("url", url);
-                    return;
-                }
-                case 400: {
-                    core.setFailed("Failed to run scan");
-                    return;
-                }
-                case 401: {
-                    core.setFailed("Failed to log in with provided credentials");
-                    return;
-                }
-                case 403: {
-                    core.setFailed("The account doesn't have any permissions for a resource");
-                    return;
-                }
-            }
-        }
-        catch (err) {
-            core.setFailed(`Failed: ${err}`);
-        }
-    });
-}
-function create(token, scan) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            console.debug(scan);
-            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-            let restRes = yield restc.create("api/v1/scans/", scan, options);
-            switch (restRes.statusCode) {
-                case 201: {
-                    let id = restRes.result.id;
-                    let url = `https://nexploit.app/scans/${id}`;
-                    console.log(`Success. Scan was created on ${url}`);
-                    core.setOutput("url", url);
-                    core.setOutput("id", id);
-                    return;
-                }
-                case 400: {
-                    core.setFailed("Failed to run scan");
-                    return;
-                }
-                case 401: {
-                    core.setFailed("Failed to log in with provided credentials");
-                    return;
-                }
-                case 403: {
-                    core.setFailed("The account doesn't have any permissions for a resource");
-                    return;
-                }
-            }
-        }
-        catch (err) {
-            core.setFailed(`Failed: ${err}`);
-        }
-    });
-}
-if (restartScanID) {
-    if (!(fileId ||
-        crawlerUrls ||
-        discoveryTypes_in ||
-        module_in ||
-        hostsFilter ||
-        type)) {
-        retest(apiToken, restartScanID, name);
-    }
-    else {
-        core.setFailed("You don't need parameters, other than api_token, restart_scan and name, if you just want to restart an existing scan");
-    }
-}
-else {
-    const module = module_in || "core";
-    const discoveryTypes = discoveryTypes_in || ["archive"];
-    create(apiToken, {
-        name,
-        discoveryTypes,
-        module,
-        crawlerUrls,
-        fileId,
-        hostsFilter,
-    });
-}
-
-
-/***/ }),
-
-/***/ 567:
-/***/ (function(module, __unusedexports, __webpack_require__) {
-
-module.exports = __webpack_require__(376);
-
-
-/***/ }),
-
-/***/ 593:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
+/***/ 974:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
@@ -1651,444 +1822,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-const qs = __webpack_require__(871);
-const url = __webpack_require__(835);
-const path = __webpack_require__(622);
-const zlib = __webpack_require__(761);
-/**
- * creates an url from a request url and optional base url (http://server:8080)
- * @param {string} resource - a fully qualified url or relative path
- * @param {string} baseUrl - an optional baseUrl (http://server:8080)
- * @param {IRequestOptions} options - an optional options object, could include QueryParameters e.g.
- * @return {string} - resultant url
- */
-function getUrl(resource, baseUrl, queryParams) {
-    const pathApi = path.posix || path;
-    let requestUrl = '';
-    if (!baseUrl) {
-        requestUrl = resource;
-    }
-    else if (!resource) {
-        requestUrl = baseUrl;
-    }
-    else {
-        const base = url.parse(baseUrl);
-        const resultantUrl = url.parse(resource);
-        // resource (specific per request) elements take priority
-        resultantUrl.protocol = resultantUrl.protocol || base.protocol;
-        resultantUrl.auth = resultantUrl.auth || base.auth;
-        resultantUrl.host = resultantUrl.host || base.host;
-        resultantUrl.pathname = pathApi.resolve(base.pathname, resultantUrl.pathname);
-        if (!resultantUrl.pathname.endsWith('/') && resource.endsWith('/')) {
-            resultantUrl.pathname += '/';
-        }
-        requestUrl = url.format(resultantUrl);
-    }
-    return queryParams ?
-        getUrlWithParsedQueryParams(requestUrl, queryParams) :
-        requestUrl;
-}
-exports.getUrl = getUrl;
-/**
- *
- * @param {string} requestUrl
- * @param {IRequestQueryParams} queryParams
- * @return {string} - Request's URL with Query Parameters appended/parsed.
- */
-function getUrlWithParsedQueryParams(requestUrl, queryParams) {
-    const url = requestUrl.replace(/\?$/g, ''); // Clean any extra end-of-string "?" character
-    const parsedQueryParams = qs.stringify(queryParams.params, buildParamsStringifyOptions(queryParams));
-    return `${url}${parsedQueryParams}`;
-}
-/**
- * Build options for QueryParams Stringifying.
- *
- * @param {IRequestQueryParams} queryParams
- * @return {object}
- */
-function buildParamsStringifyOptions(queryParams) {
-    let options = {
-        addQueryPrefix: true,
-        delimiter: (queryParams.options || {}).separator || '&',
-        allowDots: (queryParams.options || {}).shouldAllowDots || false,
-        arrayFormat: (queryParams.options || {}).arrayFormat || 'repeat',
-        encodeValuesOnly: (queryParams.options || {}).shouldOnlyEncodeValues || true
-    };
-    return options;
-}
-/**
- * Decompress/Decode gzip encoded JSON
- * Using Node.js built-in zlib module
- *
- * @param {Buffer} buffer
- * @param {string} charset? - optional; defaults to 'utf-8'
- * @return {Promise<string>}
- */
-function decompressGzippedContent(buffer, charset) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            zlib.gunzip(buffer, function (error, buffer) {
-                if (error) {
-                    reject(error);
-                }
-                resolve(buffer.toString(charset || 'utf-8'));
-            });
-        }));
-    });
-}
-exports.decompressGzippedContent = decompressGzippedContent;
-/**
- * Obtain Response's Content Charset.
- * Through inspecting `content-type` response header.
- * It Returns 'utf-8' if NO charset specified/matched.
- *
- * @param {IHttpClientResponse} response
- * @return {string} - Content Encoding Charset; Default=utf-8
- */
-function obtainContentCharset(response) {
-    // Find the charset, if specified.
-    // Search for the `charset=CHARSET` string, not including `;,\r\n`
-    // Example: content-type: 'application/json;charset=utf-8'
-    // |__ matches would be ['charset=utf-8', 'utf-8', index: 18, input: 'application/json; charset=utf-8']
-    // |_____ matches[1] would have the charset :tada: , in our example it's utf-8
-    // However, if the matches Array was empty or no charset found, 'utf-8' would be returned by default.
-    const nodeSupportedEncodings = ['ascii', 'utf8', 'utf16le', 'ucs2', 'base64', 'binary', 'hex'];
-    const contentType = response.message.headers['content-type'] || '';
-    const matches = contentType.match(/charset=([^;,\r\n]+)/i);
-    return (matches && matches[1] && nodeSupportedEncodings.indexOf(matches[1]) != -1) ? matches[1] : 'utf-8';
-}
-exports.obtainContentCharset = obtainContentCharset;
-
-
-/***/ }),
-
-/***/ 605:
-/***/ (function(module) {
-
-module.exports = require("http");
-
-/***/ }),
-
-/***/ 614:
-/***/ (function(module) {
-
-module.exports = require("events");
-
-/***/ }),
-
-/***/ 622:
-/***/ (function(module) {
-
-module.exports = require("path");
-
-/***/ }),
-
-/***/ 631:
-/***/ (function(module) {
-
-module.exports = require("net");
-
-/***/ }),
-
-/***/ 645:
-/***/ (function(__unusedmodule, exports) {
-
-"use strict";
-
-// We use any as a valid input type
-/* eslint-disable @typescript-eslint/no-explicit-any */
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.toCommandProperties = exports.toCommandValue = void 0;
-/**
- * Sanitizes an input into a string so it can be passed into issueCommand safely
- * @param input input to sanitize into a string
- */
-function toCommandValue(input) {
-    if (input === null || input === undefined) {
-        return '';
-    }
-    else if (typeof input === 'string' || input instanceof String) {
-        return input;
-    }
-    return JSON.stringify(input);
-}
-exports.toCommandValue = toCommandValue;
-/**
- *
- * @param annotationProperties
- * @returns The command properties to send with the actual annotation command
- * See IssueCommandProperties: https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionCommandManager.cs#L646
- */
-function toCommandProperties(annotationProperties) {
-    if (!Object.keys(annotationProperties).length) {
-        return {};
-    }
-    return {
-        title: annotationProperties.title,
-        line: annotationProperties.startLine,
-        endLine: annotationProperties.endLine,
-        col: annotationProperties.startColumn,
-        endColumn: annotationProperties.endColumn
-    };
-}
-exports.toCommandProperties = toCommandProperties;
-//# sourceMappingURL=utils.js.map
-
-/***/ }),
-
-/***/ 667:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const httpm = __webpack_require__(733);
-const util = __webpack_require__(593);
-class RestClient {
-    /**
-     * Creates an instance of the RestClient
-     * @constructor
-     * @param {string} userAgent - userAgent for requests
-     * @param {string} baseUrl - (Optional) If not specified, use full urls per request.  If supplied and a function passes a relative url, it will be appended to this
-     * @param {ifm.IRequestHandler[]} handlers - handlers are typically auth handlers (basic, bearer, ntlm supplied)
-     * @param {ifm.IRequestOptions} requestOptions - options for each http requests (http proxy setting, socket timeout)
-     */
-    constructor(userAgent, baseUrl, handlers, requestOptions) {
-        this.client = new httpm.HttpClient(userAgent, handlers, requestOptions);
-        if (baseUrl) {
-            this._baseUrl = baseUrl;
-        }
-    }
-    /**
-     * Gets a resource from an endpoint
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} requestUrl - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    options(requestUrl, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(requestUrl, this._baseUrl);
-            let res = yield this.client.options(url, this._headersFromOptions(options));
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Gets a resource from an endpoint
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified url or relative path
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    get(resource, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl, (options || {}).queryParameters);
-            let res = yield this.client.get(url, this._headersFromOptions(options));
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Deletes a resource from an endpoint
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    del(resource, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl);
-            let res = yield this.client.del(url, this._headersFromOptions(options));
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Creates resource(s) from an endpoint
-     * T type of object returned.
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    create(resource, resources, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl);
-            let headers = this._headersFromOptions(options, true);
-            let data = JSON.stringify(resources, null, 2);
-            let res = yield this.client.post(url, data, headers);
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Updates resource(s) from an endpoint
-     * T type of object returned.
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    update(resource, resources, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl);
-            let headers = this._headersFromOptions(options, true);
-            let data = JSON.stringify(resources, null, 2);
-            let res = yield this.client.patch(url, data, headers);
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Replaces resource(s) from an endpoint
-     * T type of object returned.
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    replace(resource, resources, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl);
-            let headers = this._headersFromOptions(options, true);
-            let data = JSON.stringify(resources, null, 2);
-            let res = yield this.client.put(url, data, headers);
-            return this.processResponse(res, options);
-        });
-    }
-    uploadStream(verb, requestUrl, stream, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(requestUrl, this._baseUrl);
-            let headers = this._headersFromOptions(options, true);
-            let res = yield this.client.sendStream(verb, url, stream, headers);
-            return this.processResponse(res, options);
-        });
-    }
-    _headersFromOptions(options, contentType) {
-        options = options || {};
-        let headers = options.additionalHeaders || {};
-        headers["Accept"] = options.acceptHeader || "application/json";
-        if (contentType) {
-            let found = false;
-            for (let header in headers) {
-                if (header.toLowerCase() == "content-type") {
-                    found = true;
-                }
-            }
-            if (!found) {
-                headers["Content-Type"] = 'application/json; charset=utf-8';
-            }
-        }
-        return headers;
-    }
-    static dateTimeDeserializer(key, value) {
-        if (typeof value === 'string') {
-            let a = new Date(value);
-            if (!isNaN(a.valueOf())) {
-                return a;
-            }
-        }
-        return value;
-    }
-    processResponse(res, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-                const statusCode = res.message.statusCode;
-                const response = {
-                    statusCode: statusCode,
-                    result: null,
-                    headers: {}
-                };
-                // not found leads to null obj returned
-                if (statusCode == httpm.HttpCodes.NotFound) {
-                    resolve(response);
-                }
-                let obj;
-                let contents;
-                // get the result from the body
-                try {
-                    contents = yield res.readBody();
-                    if (contents && contents.length > 0) {
-                        if (options && options.deserializeDates) {
-                            obj = JSON.parse(contents, RestClient.dateTimeDeserializer);
-                        }
-                        else {
-                            obj = JSON.parse(contents);
-                        }
-                        if (options && options.responseProcessor) {
-                            response.result = options.responseProcessor(obj);
-                        }
-                        else {
-                            response.result = obj;
-                        }
-                    }
-                    response.headers = res.message.headers;
-                }
-                catch (err) {
-                    // Invalid resource (contents not json);  leaving result obj null
-                }
-                // note that 3xx redirects are handled by the http layer.
-                if (statusCode > 299) {
-                    let msg;
-                    // if exception/error in body, attempt to get better error
-                    if (obj && obj.message) {
-                        msg = obj.message;
-                    }
-                    else if (contents && contents.length > 0) {
-                        // it may be the case that the exception is in the body message as string
-                        msg = contents;
-                    }
-                    else {
-                        msg = "Failed request: (" + statusCode + ")";
-                    }
-                    let err = new Error(msg);
-                    // attach statusCode and body obj (if available) to the error object
-                    err['statusCode'] = statusCode;
-                    if (response.result) {
-                        err['result'] = response.result;
-                    }
-                    reject(err);
-                }
-                else {
-                    resolve(response);
-                }
-            }));
-        });
-    }
-}
-exports.RestClient = RestClient;
-
-
-/***/ }),
-
-/***/ 669:
-/***/ (function(module) {
-
-module.exports = require("util");
-
-/***/ }),
-
-/***/ 733:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const url = __webpack_require__(835);
-const http = __webpack_require__(605);
-const https = __webpack_require__(211);
-const util = __webpack_require__(593);
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const url = __nccwpck_require__(835);
+const http = __nccwpck_require__(605);
+const https = __nccwpck_require__(211);
+const util = __nccwpck_require__(183);
 let fs;
 let tunnel;
 var HttpCodes;
@@ -2204,7 +1942,7 @@ class HttpClient {
             this._certConfig = requestOptions.cert;
             if (this._certConfig) {
                 // If using cert, need fs
-                fs = __webpack_require__(747);
+                fs = __nccwpck_require__(747);
                 // cache the cert content into memory, so we don't have to read it from disk every time
                 if (this._certConfig.caFile && fs.existsSync(this._certConfig.caFile)) {
                     this._ca = fs.readFileSync(this._certConfig.caFile, 'utf8');
@@ -2469,7 +2207,7 @@ class HttpClient {
         if (useProxy) {
             // If using proxy, need tunnel
             if (!tunnel) {
-                tunnel = __webpack_require__(567);
+                tunnel = __nccwpck_require__(379);
             }
             const agentOptions = {
                 maxSockets: maxSockets,
@@ -2565,226 +2303,498 @@ exports.HttpClient = HttpClient;
 
 /***/ }),
 
-/***/ 747:
-/***/ (function(module) {
+/***/ 235:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
+"use strict";
+
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const httpm = __nccwpck_require__(974);
+const util = __nccwpck_require__(183);
+class RestClient {
+    /**
+     * Creates an instance of the RestClient
+     * @constructor
+     * @param {string} userAgent - userAgent for requests
+     * @param {string} baseUrl - (Optional) If not specified, use full urls per request.  If supplied and a function passes a relative url, it will be appended to this
+     * @param {ifm.IRequestHandler[]} handlers - handlers are typically auth handlers (basic, bearer, ntlm supplied)
+     * @param {ifm.IRequestOptions} requestOptions - options for each http requests (http proxy setting, socket timeout)
+     */
+    constructor(userAgent, baseUrl, handlers, requestOptions) {
+        this.client = new httpm.HttpClient(userAgent, handlers, requestOptions);
+        if (baseUrl) {
+            this._baseUrl = baseUrl;
+        }
+    }
+    /**
+     * Gets a resource from an endpoint
+     * Be aware that not found returns a null.  Other error conditions reject the promise
+     * @param {string} requestUrl - fully qualified or relative url
+     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
+     */
+    options(requestUrl, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let url = util.getUrl(requestUrl, this._baseUrl);
+            let res = yield this.client.options(url, this._headersFromOptions(options));
+            return this.processResponse(res, options);
+        });
+    }
+    /**
+     * Gets a resource from an endpoint
+     * Be aware that not found returns a null.  Other error conditions reject the promise
+     * @param {string} resource - fully qualified url or relative path
+     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
+     */
+    get(resource, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let url = util.getUrl(resource, this._baseUrl, (options || {}).queryParameters);
+            let res = yield this.client.get(url, this._headersFromOptions(options));
+            return this.processResponse(res, options);
+        });
+    }
+    /**
+     * Deletes a resource from an endpoint
+     * Be aware that not found returns a null.  Other error conditions reject the promise
+     * @param {string} resource - fully qualified or relative url
+     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
+     */
+    del(resource, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let url = util.getUrl(resource, this._baseUrl);
+            let res = yield this.client.del(url, this._headersFromOptions(options));
+            return this.processResponse(res, options);
+        });
+    }
+    /**
+     * Creates resource(s) from an endpoint
+     * T type of object returned.
+     * Be aware that not found returns a null.  Other error conditions reject the promise
+     * @param {string} resource - fully qualified or relative url
+     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
+     */
+    create(resource, resources, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let url = util.getUrl(resource, this._baseUrl);
+            let headers = this._headersFromOptions(options, true);
+            let data = JSON.stringify(resources, null, 2);
+            let res = yield this.client.post(url, data, headers);
+            return this.processResponse(res, options);
+        });
+    }
+    /**
+     * Updates resource(s) from an endpoint
+     * T type of object returned.
+     * Be aware that not found returns a null.  Other error conditions reject the promise
+     * @param {string} resource - fully qualified or relative url
+     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
+     */
+    update(resource, resources, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let url = util.getUrl(resource, this._baseUrl);
+            let headers = this._headersFromOptions(options, true);
+            let data = JSON.stringify(resources, null, 2);
+            let res = yield this.client.patch(url, data, headers);
+            return this.processResponse(res, options);
+        });
+    }
+    /**
+     * Replaces resource(s) from an endpoint
+     * T type of object returned.
+     * Be aware that not found returns a null.  Other error conditions reject the promise
+     * @param {string} resource - fully qualified or relative url
+     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
+     */
+    replace(resource, resources, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let url = util.getUrl(resource, this._baseUrl);
+            let headers = this._headersFromOptions(options, true);
+            let data = JSON.stringify(resources, null, 2);
+            let res = yield this.client.put(url, data, headers);
+            return this.processResponse(res, options);
+        });
+    }
+    uploadStream(verb, requestUrl, stream, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let url = util.getUrl(requestUrl, this._baseUrl);
+            let headers = this._headersFromOptions(options, true);
+            let res = yield this.client.sendStream(verb, url, stream, headers);
+            return this.processResponse(res, options);
+        });
+    }
+    _headersFromOptions(options, contentType) {
+        options = options || {};
+        let headers = options.additionalHeaders || {};
+        headers["Accept"] = options.acceptHeader || "application/json";
+        if (contentType) {
+            let found = false;
+            for (let header in headers) {
+                if (header.toLowerCase() == "content-type") {
+                    found = true;
+                }
+            }
+            if (!found) {
+                headers["Content-Type"] = 'application/json; charset=utf-8';
+            }
+        }
+        return headers;
+    }
+    static dateTimeDeserializer(key, value) {
+        if (typeof value === 'string') {
+            let a = new Date(value);
+            if (!isNaN(a.valueOf())) {
+                return a;
+            }
+        }
+        return value;
+    }
+    processResponse(res, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+                const statusCode = res.message.statusCode;
+                const response = {
+                    statusCode: statusCode,
+                    result: null,
+                    headers: {}
+                };
+                // not found leads to null obj returned
+                if (statusCode == httpm.HttpCodes.NotFound) {
+                    resolve(response);
+                }
+                let obj;
+                let contents;
+                // get the result from the body
+                try {
+                    contents = yield res.readBody();
+                    if (contents && contents.length > 0) {
+                        if (options && options.deserializeDates) {
+                            obj = JSON.parse(contents, RestClient.dateTimeDeserializer);
+                        }
+                        else {
+                            obj = JSON.parse(contents);
+                        }
+                        if (options && options.responseProcessor) {
+                            response.result = options.responseProcessor(obj);
+                        }
+                        else {
+                            response.result = obj;
+                        }
+                    }
+                    response.headers = res.message.headers;
+                }
+                catch (err) {
+                    // Invalid resource (contents not json);  leaving result obj null
+                }
+                // note that 3xx redirects are handled by the http layer.
+                if (statusCode > 299) {
+                    let msg;
+                    // if exception/error in body, attempt to get better error
+                    if (obj && obj.message) {
+                        msg = obj.message;
+                    }
+                    else if (contents && contents.length > 0) {
+                        // it may be the case that the exception is in the body message as string
+                        msg = contents;
+                    }
+                    else {
+                        msg = "Failed request: (" + statusCode + ")";
+                    }
+                    let err = new Error(msg);
+                    // attach statusCode and body obj (if available) to the error object
+                    err['statusCode'] = statusCode;
+                    if (response.result) {
+                        err['result'] = response.result;
+                    }
+                    reject(err);
+                }
+                else {
+                    resolve(response);
+                }
+            }));
+        });
+    }
+}
+exports.RestClient = RestClient;
+
+
+/***/ }),
+
+/***/ 183:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const qs = __nccwpck_require__(763);
+const url = __nccwpck_require__(835);
+const path = __nccwpck_require__(622);
+const zlib = __nccwpck_require__(761);
+/**
+ * creates an url from a request url and optional base url (http://server:8080)
+ * @param {string} resource - a fully qualified url or relative path
+ * @param {string} baseUrl - an optional baseUrl (http://server:8080)
+ * @param {IRequestOptions} options - an optional options object, could include QueryParameters e.g.
+ * @return {string} - resultant url
+ */
+function getUrl(resource, baseUrl, queryParams) {
+    const pathApi = path.posix || path;
+    let requestUrl = '';
+    if (!baseUrl) {
+        requestUrl = resource;
+    }
+    else if (!resource) {
+        requestUrl = baseUrl;
+    }
+    else {
+        const base = url.parse(baseUrl);
+        const resultantUrl = url.parse(resource);
+        // resource (specific per request) elements take priority
+        resultantUrl.protocol = resultantUrl.protocol || base.protocol;
+        resultantUrl.auth = resultantUrl.auth || base.auth;
+        resultantUrl.host = resultantUrl.host || base.host;
+        resultantUrl.pathname = pathApi.resolve(base.pathname, resultantUrl.pathname);
+        if (!resultantUrl.pathname.endsWith('/') && resource.endsWith('/')) {
+            resultantUrl.pathname += '/';
+        }
+        requestUrl = url.format(resultantUrl);
+    }
+    return queryParams ?
+        getUrlWithParsedQueryParams(requestUrl, queryParams) :
+        requestUrl;
+}
+exports.getUrl = getUrl;
+/**
+ *
+ * @param {string} requestUrl
+ * @param {IRequestQueryParams} queryParams
+ * @return {string} - Request's URL with Query Parameters appended/parsed.
+ */
+function getUrlWithParsedQueryParams(requestUrl, queryParams) {
+    const url = requestUrl.replace(/\?$/g, ''); // Clean any extra end-of-string "?" character
+    const parsedQueryParams = qs.stringify(queryParams.params, buildParamsStringifyOptions(queryParams));
+    return `${url}${parsedQueryParams}`;
+}
+/**
+ * Build options for QueryParams Stringifying.
+ *
+ * @param {IRequestQueryParams} queryParams
+ * @return {object}
+ */
+function buildParamsStringifyOptions(queryParams) {
+    let options = {
+        addQueryPrefix: true,
+        delimiter: (queryParams.options || {}).separator || '&',
+        allowDots: (queryParams.options || {}).shouldAllowDots || false,
+        arrayFormat: (queryParams.options || {}).arrayFormat || 'repeat',
+        encodeValuesOnly: (queryParams.options || {}).shouldOnlyEncodeValues || true
+    };
+    return options;
+}
+/**
+ * Decompress/Decode gzip encoded JSON
+ * Using Node.js built-in zlib module
+ *
+ * @param {Buffer} buffer
+ * @param {string} charset? - optional; defaults to 'utf-8'
+ * @return {Promise<string>}
+ */
+function decompressGzippedContent(buffer, charset) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+            zlib.gunzip(buffer, function (error, buffer) {
+                if (error) {
+                    reject(error);
+                }
+                resolve(buffer.toString(charset || 'utf-8'));
+            });
+        }));
+    });
+}
+exports.decompressGzippedContent = decompressGzippedContent;
+/**
+ * Obtain Response's Content Charset.
+ * Through inspecting `content-type` response header.
+ * It Returns 'utf-8' if NO charset specified/matched.
+ *
+ * @param {IHttpClientResponse} response
+ * @return {string} - Content Encoding Charset; Default=utf-8
+ */
+function obtainContentCharset(response) {
+    // Find the charset, if specified.
+    // Search for the `charset=CHARSET` string, not including `;,\r\n`
+    // Example: content-type: 'application/json;charset=utf-8'
+    // |__ matches would be ['charset=utf-8', 'utf-8', index: 18, input: 'application/json; charset=utf-8']
+    // |_____ matches[1] would have the charset :tada: , in our example it's utf-8
+    // However, if the matches Array was empty or no charset found, 'utf-8' would be returned by default.
+    const nodeSupportedEncodings = ['ascii', 'utf8', 'utf16le', 'ucs2', 'base64', 'binary', 'hex'];
+    const contentType = response.message.headers['content-type'] || '';
+    const matches = contentType.match(/charset=([^;,\r\n]+)/i);
+    return (matches && matches[1] && nodeSupportedEncodings.indexOf(matches[1]) != -1) ? matches[1] : 'utf-8';
+}
+exports.obtainContentCharset = obtainContentCharset;
+
+
+/***/ }),
+
+/***/ 357:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("assert");
+
+/***/ }),
+
+/***/ 614:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("events");
+
+/***/ }),
+
+/***/ 747:
+/***/ ((module) => {
+
+"use strict";
 module.exports = require("fs");
 
 /***/ }),
 
-/***/ 761:
-/***/ (function(module) {
+/***/ 605:
+/***/ ((module) => {
 
-module.exports = require("zlib");
+"use strict";
+module.exports = require("http");
 
 /***/ }),
 
-/***/ 832:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
+/***/ 211:
+/***/ ((module) => {
 
 "use strict";
+module.exports = require("https");
 
-// For internal use, subject to change.
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.issueCommand = void 0;
-// We use any as a valid input type
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const fs = __importStar(__webpack_require__(747));
-const os = __importStar(__webpack_require__(87));
-const utils_1 = __webpack_require__(645);
-function issueCommand(command, message) {
-    const filePath = process.env[`GITHUB_${command}`];
-    if (!filePath) {
-        throw new Error(`Unable to find environment variable for file command ${command}`);
-    }
-    if (!fs.existsSync(filePath)) {
-        throw new Error(`Missing file at path: ${filePath}`);
-    }
-    fs.appendFileSync(filePath, `${utils_1.toCommandValue(message)}${os.EOL}`, {
-        encoding: 'utf8'
-    });
-}
-exports.issueCommand = issueCommand;
-//# sourceMappingURL=file-command.js.map
+/***/ }),
+
+/***/ 631:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("net");
+
+/***/ }),
+
+/***/ 87:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("os");
+
+/***/ }),
+
+/***/ 622:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("path");
+
+/***/ }),
+
+/***/ 16:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("tls");
 
 /***/ }),
 
 /***/ 835:
-/***/ (function(module) {
+/***/ ((module) => {
 
+"use strict";
 module.exports = require("url");
 
 /***/ }),
 
-/***/ 871:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ 669:
+/***/ ((module) => {
 
 "use strict";
-
-
-var stringify = __webpack_require__(83);
-var parse = __webpack_require__(549);
-var formats = __webpack_require__(929);
-
-module.exports = {
-    formats: formats,
-    parse: parse,
-    stringify: stringify
-};
-
+module.exports = require("util");
 
 /***/ }),
 
-/***/ 929:
-/***/ (function(module, __unusedexports, __webpack_require__) {
+/***/ 761:
+/***/ ((module) => {
 
 "use strict";
-
-
-var replace = String.prototype.replace;
-var percentTwenties = /%20/g;
-
-var util = __webpack_require__(271);
-
-var Format = {
-    RFC1738: 'RFC1738',
-    RFC3986: 'RFC3986'
-};
-
-module.exports = util.assign(
-    {
-        'default': Format.RFC3986,
-        formatters: {
-            RFC1738: function (value) {
-                return replace.call(value, percentTwenties, '+');
-            },
-            RFC3986: function (value) {
-                return String(value);
-            }
-        }
-    },
-    Format
-);
-
-
-/***/ }),
-
-/***/ 955:
-/***/ (function(__unusedmodule, exports, __webpack_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.issue = exports.issueCommand = void 0;
-const os = __importStar(__webpack_require__(87));
-const utils_1 = __webpack_require__(645);
-/**
- * Commands
- *
- * Command Format:
- *   ::name key=value,key=value::message
- *
- * Examples:
- *   ::warning::This is the message
- *   ::set-env name=MY_VAR::some value
- */
-function issueCommand(command, properties, message) {
-    const cmd = new Command(command, properties, message);
-    process.stdout.write(cmd.toString() + os.EOL);
-}
-exports.issueCommand = issueCommand;
-function issue(name, message = '') {
-    issueCommand(name, {}, message);
-}
-exports.issue = issue;
-const CMD_STRING = '::';
-class Command {
-    constructor(command, properties, message) {
-        if (!command) {
-            command = 'missing.command';
-        }
-        this.command = command;
-        this.properties = properties;
-        this.message = message;
-    }
-    toString() {
-        let cmdStr = CMD_STRING + this.command;
-        if (this.properties && Object.keys(this.properties).length > 0) {
-            cmdStr += ' ';
-            let first = true;
-            for (const key in this.properties) {
-                if (this.properties.hasOwnProperty(key)) {
-                    const val = this.properties[key];
-                    if (val) {
-                        if (first) {
-                            first = false;
-                        }
-                        else {
-                            cmdStr += ',';
-                        }
-                        cmdStr += `${key}=${escapeProperty(val)}`;
-                    }
-                }
-            }
-        }
-        cmdStr += `${CMD_STRING}${escapeData(this.message)}`;
-        return cmdStr;
-    }
-}
-function escapeData(s) {
-    return utils_1.toCommandValue(s)
-        .replace(/%/g, '%25')
-        .replace(/\r/g, '%0D')
-        .replace(/\n/g, '%0A');
-}
-function escapeProperty(s) {
-    return utils_1.toCommandValue(s)
-        .replace(/%/g, '%25')
-        .replace(/\r/g, '%0D')
-        .replace(/\n/g, '%0A')
-        .replace(/:/g, '%3A')
-        .replace(/,/g, '%2C');
-}
-//# sourceMappingURL=command.js.map
+module.exports = require("zlib");
 
 /***/ })
 
-/******/ });
+/******/ 	});
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __nccwpck_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		var threw = true;
+/******/ 		try {
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
+/******/ 			threw = false;
+/******/ 		} finally {
+/******/ 			if(threw) delete __webpack_module_cache__[moduleId];
+/******/ 		}
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/compat */
+/******/ 	
+/******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
+/******/ 	
+/************************************************************************/
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __nccwpck_require__(328);
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
+/******/ })()
+;
