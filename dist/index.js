@@ -1861,6 +1861,7 @@ var HttpCodes;
 })(HttpCodes = exports.HttpCodes || (exports.HttpCodes = {}));
 const HttpRedirectCodes = [HttpCodes.MovedPermanently, HttpCodes.ResourceMoved, HttpCodes.SeeOther, HttpCodes.TemporaryRedirect, HttpCodes.PermanentRedirect];
 const HttpResponseRetryCodes = [HttpCodes.BadGateway, HttpCodes.ServiceUnavailable, HttpCodes.GatewayTimeout];
+const NetworkRetryErrors = ['ECONNRESET', 'ENOTFOUND', 'ESOCKETTIMEDOUT', 'ETIMEDOUT', 'ECONNREFUSED'];
 const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
 const ExponentialBackoffCeiling = 10;
 const ExponentialBackoffTimeSlice = 5;
@@ -1923,7 +1924,7 @@ class HttpClient {
         if (no_proxy) {
             this._httpProxyBypassHosts = [];
             no_proxy.split(',').forEach(bypass => {
-                this._httpProxyBypassHosts.push(new RegExp(bypass, 'i'));
+                this._httpProxyBypassHosts.push(util.buildProxyBypassRegexFromEnv(bypass));
             });
         }
         this.requestOptions = requestOptions;
@@ -2015,7 +2016,17 @@ class HttpClient {
             let numTries = 0;
             let response;
             while (numTries < maxTries) {
-                response = yield this.requestRaw(info, data);
+                try {
+                    response = yield this.requestRaw(info, data);
+                }
+                catch (err) {
+                    numTries++;
+                    if (err && err.code && NetworkRetryErrors.indexOf(err.code) > -1 && numTries < maxTries) {
+                        yield this._performExponentialBackoff(numTries);
+                        continue;
+                    }
+                    throw err;
+                }
                 // Check if it's an authentication challenge
                 if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
                     let authenticationHandler;
@@ -2154,6 +2165,8 @@ class HttpClient {
         info.options.port = info.parsedUrl.port ? parseInt(info.parsedUrl.port) : defaultPort;
         info.options.path = (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
         info.options.method = method;
+        info.options.timeout = (this.requestOptions && this.requestOptions.socketTimeout) || this._socketTimeout;
+        this._socketTimeout = info.options.timeout;
         info.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
             info.options.headers["user-agent"] = this.userAgent;
@@ -2370,7 +2383,7 @@ class RestClient {
      */
     del(resource, options) {
         return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl);
+            let url = util.getUrl(resource, this._baseUrl, (options || {}).queryParameters);
             let res = yield this.client.del(url, this._headersFromOptions(options));
             return this.processResponse(res, options);
         });
@@ -2630,6 +2643,28 @@ function decompressGzippedContent(buffer, charset) {
     });
 }
 exports.decompressGzippedContent = decompressGzippedContent;
+/**
+ * Builds a RegExp to test urls against for deciding
+ * wether to bypass proxy from an entry of the
+ * environment variable setting NO_PROXY
+ *
+ * @param {string} bypass
+ * @return {RegExp}
+ */
+function buildProxyBypassRegexFromEnv(bypass) {
+    try {
+        // We need to keep this around for back-compat purposes
+        return new RegExp(bypass, 'i');
+    }
+    catch (err) {
+        if (err instanceof SyntaxError && (bypass || "").startsWith("*")) {
+            let wildcardEscaped = bypass.replace('*', '(.*)');
+            return new RegExp(wildcardEscaped, 'i');
+        }
+        throw err;
+    }
+}
+exports.buildProxyBypassRegexFromEnv = buildProxyBypassRegexFromEnv;
 /**
  * Obtain Response's Content Charset.
  * Through inspecting `content-type` response header.
