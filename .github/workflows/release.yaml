@@ -5,16 +5,19 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
-    container: node:16
     name: Build GitHub Action
+    runs-on: ubuntu-latest
+    container:
+      image: node:16
+      env:
+        NODE_ENV: prodaction
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install rsync 📚
       run: |
         apt-get update && apt-get install -y rsync
     - name: Install dependencies
-      run: npm install && npm install -g typescript && npm install -g @zeit/ncc
+      run: npm ci && npm install -g @vercel/ncc
     - name: Build release
       run: |
         npm run build
@@ -26,8 +29,8 @@ jobs:
         cp action.yml release/
         cp -R dist/ release/dist/
     - name: Push changes to the branch
-      uses: JamesIves/github-pages-deploy-action@releases/v3
+      uses: JamesIves/github-pages-deploy-action@4.1.5
       with:
-        ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        BRANCH: release
-        FOLDER: release
+        token: ${{ secrets.ACCESS_TOKEN }}
+        branch: release
+        folder: release
