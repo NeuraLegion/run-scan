@@ -1504,7 +1504,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const core = __importStar(__webpack_require__(68));
 const rm = __importStar(__webpack_require__(667));
-core.setFailed('Start');
 const apiToken = core.getInput("api_token");
 const restartScanID = core.getInput("restart_scan");
 const name = core.getInput("name");
@@ -1515,7 +1514,6 @@ const module_in = core.getInput("module");
 const hostsFilter = getArray("hosts_filter");
 const type = core.getInput("type");
 const hostname = core.getInput("hostname");
-core.setOutput('Variables were assigned', '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
 function getArray(name) {
     const input = core.getInput(name);
     try {
@@ -1563,25 +1561,16 @@ function retest(token, uuid, name) {
             }
         }
         catch (err) {
-            core.setFailed(`Retest failed: ${err}`);
+            core.setFailed(`Failed: ${err}`);
         }
     });
 }
 function create(token, scan) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // console.log(scan);
-            // let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-            const restRes = {
-                statusCode: 201,
-                result: null,
-                headers: {}
-            };
-            // let restRes: rm.IRestResponse<Scan> = await restc.create<Scan>(
-            //   "api/v1/scans/",
-            //   scan,
-            //   options
-            // );
+            console.debug(scan);
+            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
+            let restRes = yield restc.create("api/v1/scans/", scan, options);
             switch (restRes.statusCode) {
                 case 201: {
                     let id = restRes.result.id;
@@ -1606,7 +1595,7 @@ function create(token, scan) {
             }
         }
         catch (err) {
-            core.setFailed(`Create test failed: ${err}`);
+            core.setFailed(`Failed: ${err}`);
         }
     });
 }
