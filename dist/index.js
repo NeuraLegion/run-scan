@@ -120,19 +120,19 @@ function create(token, scan) {
             if ('statusCode' in err) {
                 switch (err.statusCode) {
                     case 400: {
-                        core.setFailed(`Failed to run scan: ${err}`);
+                        core.setFailed(`Failed to run scan: ${err.message}`);
                         return;
                     }
                     case 401: {
-                        core.setFailed(`Failed to log in with provided credentials: ${err}`);
+                        core.setFailed(`Failed to log in with provided credentials: ${err.message}`);
                         return;
                     }
                     case 403: {
-                        core.setFailed(`The account doesn't have any permissions for a resource: ${err}`);
+                        core.setFailed(`The account doesn't have any permissions for a resource: ${err.message}`);
                         return;
                     }
                     default: {
-                        core.setFailed(`Failed create scan: ${err}`);
+                        core.setFailed(`Failed create scan: ${err.message}`);
                     }
                 }
             }
@@ -153,12 +153,12 @@ if (restartScanID) {
     }
 }
 else {
-    const module = module_in || "core";
+    const module = module_in || "dast";
     const discoveryTypes = discoveryTypes_in || ["archive"];
     create(apiToken, {
         name,
         discoveryTypes,
-        // module,
+        module,
         crawlerUrls,
         fileId,
         hostsFilter,
