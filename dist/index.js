@@ -37,6 +37,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(964));
 const rm = __importStar(__nccwpck_require__(235));
+console.log('=============================================== console.log ===============================================');
+core.info('+++++++++++++++++++++++++++++++++++++++++++++++++++ core.info +++++++++++++++++++++++++++++++++++++++++++++++++++');
 const apiToken = core.getInput("api_token");
 const restartScanID = core.getInput("restart_scan");
 const name = core.getInput("name");
@@ -52,15 +54,15 @@ function getArray(name) {
     try {
         const elements = JSON.parse(input);
         if (elements instanceof Array) {
-            return elements.length == 0 ? null : elements;
+            return elements.length == 0 ? undefined : elements;
         }
         else {
-            return null;
+            return undefined;
         }
     }
     catch (err) {
         core.debug(name + ` failed: ${err}` + " => " + input);
-        return null;
+        return undefined;
     }
 }
 const baseUrl = hostname ? `https://$hostname` : "https://nexploit.app";
@@ -71,7 +73,9 @@ function retest(token, uuid, name) {
         let scan_name = name || "GitHub Actions";
         try {
             let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
+            core.info('---- Send ReTest request ----');
             let restRes = yield restc.create(`api/v1/scans/${uuid}/retest`, { name: scan_name }, options);
+            core.info('---- Request ReTest has been sent ----');
             switch (restRes.statusCode) {
                 case 201: {
                     let url = `https://nexploit.app/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
@@ -94,16 +98,19 @@ function retest(token, uuid, name) {
             }
         }
         catch (err) {
-            core.setFailed(`Failed: ${err}`);
+            core.setFailed(`Failed run retest: ${err}`);
         }
     });
 }
 function create(token, scan) {
     return __awaiter(this, void 0, void 0, function* () {
+        let restRes;
         try {
             console.debug(scan);
             let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-            let restRes = yield restc.create("api/v1/scans/", scan, options);
+            core.info('---- Send Create request ----');
+            restRes = yield restc.create("api/v1/scans/", scan, options);
+            core.info('---- Request Create has been sent ----');
             switch (restRes.statusCode) {
                 case 201: {
                     let id = restRes.result.id;
@@ -128,7 +135,8 @@ function create(token, scan) {
             }
         }
         catch (err) {
-            core.setFailed(`Failed: ${err}`);
+            console.dir(err);
+            core.setFailed(`Failed create test: ${err}`);
         }
     });
 }
@@ -151,10 +159,10 @@ else {
     create(apiToken, {
         name,
         discoveryTypes,
-        module,
+        // module,
         crawlerUrls,
-        fileId,
-        hostsFilter,
+        // fileId,
+        // hostsFilter,
     });
 }
 
