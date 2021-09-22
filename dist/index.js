@@ -72,29 +72,17 @@ function retest(token, uuid, name) {
         try {
             let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
             let restRes = yield restc.create(`api/v1/scans/${uuid}/retest`, { name: scan_name }, options);
-            switch (restRes.statusCode) {
-                case 201: {
-                    let url = `https://nexploit.app/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
-                    console.log(`Success. Scan was created on ${url}`);
-                    core.setOutput("url", url);
-                    return;
-                }
-                case 400: {
-                    core.setFailed("Failed to run scan");
-                    return;
-                }
-                case 401: {
-                    core.setFailed("Failed to log in with provided credentials");
-                    return;
-                }
-                case 403: {
-                    core.setFailed("The account doesn't have any permissions for a resource");
-                    return;
-                }
+            if (restRes.statusCode < 300) {
+                let url = `${baseUrl}/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
+                console.log(`Success. Scan was created on ${url}`);
+                core.setOutput("url", url);
+            }
+            else {
+                core.setFailed(`Failed retest. Status code: ${restRes.statusCode}`);
             }
         }
         catch (err) {
-            core.setFailed(`Failed run retest: ${err}`);
+            core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
         }
     });
 }
@@ -107,7 +95,7 @@ function create(token, scan) {
             restRes = yield restc.create("api/v1/scans/", scan, options);
             if (restRes.statusCode < 300) {
                 let id = restRes.result.id;
-                let url = `https://nexploit.app/scans/${id}`;
+                let url = `${baseUrl}/scans/${id}`;
                 console.log(`Success. Scan was created on ${url}`);
                 core.setOutput("url", url);
                 core.setOutput("id", id);
@@ -117,25 +105,7 @@ function create(token, scan) {
             }
         }
         catch (err) {
-            if ('statusCode' in err) {
-                switch (err.statusCode) {
-                    case 400: {
-                        core.setFailed(`Failed to run scan: ${err.message}`);
-                        return;
-                    }
-                    case 401: {
-                        core.setFailed(`Failed to log in with provided credentials: ${err.message}`);
-                        return;
-                    }
-                    case 403: {
-                        core.setFailed(`The account doesn't have any permissions for a resource: ${err.message}`);
-                        return;
-                    }
-                    default: {
-                        core.setFailed(`Failed create scan: ${err.message}`);
-                    }
-                }
-            }
+            core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
         }
     });
 }
