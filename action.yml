@@ -23,7 +23,7 @@ inputs:
     description: 'Crawler URLs'
     required: false
   module:
-    description: 'Possible values: *core*, *exploratory*'
+    description: 'Possible values: *dast*, *fuzzer*'
     required: false
   hosts_filter:
     description: 'Hosts filter'
