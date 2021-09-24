@@ -15,17 +15,14 @@ jobs:
     - name: Install dependencies
       run: npm ci && npm install -g @vercel/ncc
     - name: Build release
-      run: |
-        npm run build
-        npm run pack
+      run: npm run build && npm run pack
     - name: Copy files to release
       run: |
         mkdir release
         cp README.md release/
         cp action.yml release/
         cp -R dist/ release/dist/
-    - name: Start Nexploit Scan
-      id: test
+    - name: Start Nexploit Scan 🏁
       uses: ./release
       with:
         api_token: ${{ secrets.NEXPLOIT_TOKEN }}
