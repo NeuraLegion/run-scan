@@ -35,7 +35,6 @@ jobs:
         module: "dast"
         hosts_filter: |
           [ ]
-        hostname: "3b69-195-138-93-59.ngrok.io"
     - name: Push changes to the branch
       uses: JamesIves/github-pages-deploy-action@4.1.5
       with:
