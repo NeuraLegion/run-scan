@@ -63,7 +63,8 @@ function getArray(name) {
         return undefined;
     }
 }
-const baseUrl = hostname ? `https://${hostname}` : "https://nexploit.app";
+const baseUrl = hostname ? `https://${hostname}` : 'https://nexploit.app';
+console.log(baseUrl);
 let restc = new rm.RestClient("GitHub Actions", baseUrl);
 function retest(token, uuid, name) {
     var _a;
