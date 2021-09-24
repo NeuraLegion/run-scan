@@ -29,7 +29,7 @@ function getArray(name: string): string[] | undefined {
   }
 }
 
-const baseUrl = hostname ? `https://$hostname` : "https://nexploit.app";
+const baseUrl = hostname ? `https://${hostname}` : "https://nexploit.app";
 let restc: rm.RestClient = new rm.RestClient("GitHub Actions", baseUrl);
 
 interface Scan {
