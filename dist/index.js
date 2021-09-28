@@ -37,46 +37,45 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(964));
 const rm = __importStar(__nccwpck_require__(235));
-const apiToken = core.getInput("api_token");
-const restartScanID = core.getInput("restart_scan");
-const name = core.getInput("name");
-const fileId = core.getInput("file_id");
-const crawlerUrls = getArray("crawler_urls");
-const discoveryTypes_in = getArray("discovery_types");
-const module_in = core.getInput("module");
-const hostsFilter = getArray("hosts_filter");
-const type = core.getInput("type");
-const hostname = core.getInput("hostname");
-function getArray(name) {
-    const input = core.getInput(name);
+const apiToken = core.getInput('api_token');
+const restartScanID = core.getInput('restart_scan');
+const name = core.getInput('name');
+const fileId = core.getInput('file_id');
+const crawlerUrls = getArray('crawler_urls');
+const discoveryTypesIn = getArray('discovery_types');
+const module_in = core.getInput('module');
+const hostsFilter = getArray('hosts_filter');
+const type = core.getInput('type');
+const hostname = core.getInput('hostname');
+function getArray(inputName) {
+    const input = core.getInput(inputName);
     try {
         const elements = JSON.parse(input);
         if (elements instanceof Array) {
-            return elements.length == 0 ? undefined : elements;
+            return elements.length ? elements : undefined;
         }
         else {
             return undefined;
         }
     }
     catch (err) {
-        core.debug(name + ` failed: ${err}` + " => " + input);
+        core.debug(inputName + ` failed: ${err}` + ' => ' + input);
         return undefined;
     }
 }
 const baseUrl = hostname ? `https://${hostname}` : 'https://nexploit.app';
-console.log(baseUrl);
-let restc = new rm.RestClient("GitHub Actions", baseUrl);
-function retest(token, uuid, name) {
+const restc = new rm.RestClient('GitHub Actions', baseUrl);
+function retest(token, uuid, scanName) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        let scan_name = name || "GitHub Actions";
         try {
-            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-            let restRes = yield restc.create(`api/v1/scans/${uuid}/retest`, { name: scan_name }, options);
+            const options = {
+                additionalHeaders: { Authorization: `Api-Key ${token}` }
+            };
+            const restRes = yield restc.create(`api/v1/scans/${uuid}/retest`, { name: scanName || 'GitHub Actions' }, options);
             if (restRes.statusCode < 300) {
-                let url = `${baseUrl}/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
-                console.log(`Success. Scan was created on ${url}`);
-                core.setOutput("url", url);
+                const url = `${baseUrl}/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
+                core.setOutput('url', url);
             }
             else {
                 core.setFailed(`Failed retest. Status code: ${restRes.statusCode}`);
@@ -91,15 +90,15 @@ function create(token, scan) {
     return __awaiter(this, void 0, void 0, function* () {
         let restRes;
         try {
-            console.debug(scan);
-            let options = { additionalHeaders: { Authorization: `Api-Key ${token}` } };
-            restRes = yield restc.create("api/v1/scans/", scan, options);
-            if (restRes.statusCode < 300) {
-                let id = restRes.result.id;
-                let url = `${baseUrl}/scans/${id}`;
-                console.log(`Success. Scan was created on ${url}`);
-                core.setOutput("url", url);
-                core.setOutput("id", id);
+            const options = {
+                additionalHeaders: { Authorization: `Api-Key ${token}` }
+            };
+            restRes = yield restc.create('api/v1/scans/', scan, options);
+            if (restRes.result && restRes.statusCode < 300) {
+                const id = restRes.result.id;
+                const url = `${baseUrl}/scans/${id}`;
+                core.setOutput('url', url);
+                core.setOutput('id', id);
             }
             else {
                 core.setFailed(`Failed create scan. Status code: ${restRes.statusCode}`);
@@ -113,7 +112,7 @@ function create(token, scan) {
 if (restartScanID) {
     if (!(fileId ||
         crawlerUrls ||
-        discoveryTypes_in ||
+        discoveryTypesIn ||
         module_in ||
         hostsFilter ||
         type)) {
@@ -124,15 +123,15 @@ if (restartScanID) {
     }
 }
 else {
-    const module = module_in || "dast";
-    const discoveryTypes = discoveryTypes_in || ["archive"];
+    const module = module_in || 'dast';
+    const discoveryTypes = discoveryTypesIn || ['archive'];
     create(apiToken, {
         name,
         discoveryTypes,
         module,
         crawlerUrls,
         fileId,
-        hostsFilter,
+        hostsFilter
     });
 }
 
