@@ -1,3 +1,12 @@
 node_modules/
 dist
+.clinic
+.idea
+.DS_Store
+.vs
+.vscode
+.stfolder
+.env
+.secrets
+*.code-workspace
 _*

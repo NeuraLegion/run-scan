@@ -1,0 +1,5 @@
+dist
+assets
+node_modules
+*-lock.json
+*.lock

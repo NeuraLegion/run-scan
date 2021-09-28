@@ -1,7 +1,9 @@
+name: CI / Automated testing
+
 on:
-  push:
+  pull_request:
     branches:
-      - master
+      - '**'
 
 jobs:
   release:
@@ -9,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     container: node:16
     steps:
-    - name: Install rsync 📚
+    - name: Install packages
       run: apt-get update && apt-get install -y rsync git
     - uses: actions/checkout@v2.3.1
     - name: Install dependencies
@@ -26,7 +28,6 @@ jobs:
       uses: ./release
       with:
         api_token: ${{ secrets.NEXPLOIT_TOKEN }}
-#       restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
         name: GitHub scan ${{ github.sha }}
         discovery_types: |
           [ "crawler" ]
@@ -35,9 +36,3 @@ jobs:
         module: "dast"
         hosts_filter: |
           [ ]
-    - name: Push changes to the branch
-      uses: JamesIves/github-pages-deploy-action@4.1.5
-      with:
-        branch: release
-        folder: release
-        token: ${{ secrets.PA_TOKEN }}
