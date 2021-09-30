@@ -49,9 +49,10 @@ async function retest(token: string, uuid: string, scanName?: string) {
       options
     );
 
-    if (restRes.statusCode < 300) {
-      const url = `${baseUrl}/scans/${restRes.result?.id}`;
+    if (restRes.statusCode < 300 && restRes.result) {
+      const url = `${baseUrl}/scans/${restRes.result.id}`;
       core.setOutput('url', url);
+      core.setOutput('id', restRes.result.id);
     } else {
       core.setFailed(`Failed retest. Status code: ${restRes.statusCode}`);
     }
