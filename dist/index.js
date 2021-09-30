@@ -66,16 +66,16 @@ function getArray(inputName) {
 const baseUrl = hostname ? `https://${hostname}` : 'https://nexploit.app';
 const restc = new rm.RestClient('GitHub Actions', baseUrl);
 function retest(token, uuid, scanName) {
-    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const options = {
                 additionalHeaders: { Authorization: `Api-Key ${token}` }
             };
             const restRes = yield restc.create(`api/v1/scans/${uuid}/retest`, { name: scanName || 'GitHub Actions' }, options);
-            if (restRes.statusCode < 300) {
-                const url = `${baseUrl}/scans/${(_a = restRes.result) === null || _a === void 0 ? void 0 : _a.id}`;
+            if (restRes.statusCode < 300 && restRes.result) {
+                const url = `${baseUrl}/scans/${restRes.result.id}`;
                 core.setOutput('url', url);
+                core.setOutput('id', restRes.result.id);
             }
             else {
                 core.setFailed(`Failed retest. Status code: ${restRes.statusCode}`);
