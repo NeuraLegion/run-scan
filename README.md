@@ -13,7 +13,7 @@ Nexploit is built to solve the core security tasks of your applications and APIs
 
 More information is available on NeuraLegion’s:
 * [Website](https://www.neuralegion.com/)
-* [Knowledge base](https://kb.neuralegion.com/#/guide/np-web-ui/scanning)
+* [Knowledge base](https://docs.neuralegion.com/docs/quickstart)
 * [YouTube channel](https://www.youtube.com/channel/UCoIC0T1pmozq3eKLsUR2uUw)
 * [GitHub Actions](https://github.com/marketplace?query=neuralegion+)
 
