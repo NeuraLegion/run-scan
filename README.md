@@ -2,14 +2,34 @@
 
 This action runs a new security scan in Nexploit, or reruns an existing one.
 
-## About NeuraLegion's Nexploit 
+### Build Secure Apps & APIs. Fast.
 
-NeuraLegion’s NexPloit is a Dynamic Application Security Testing (DAST) solution powered by Artificial Intelligence (AI) and modern scanning technologies. With its effective automation and integration capabilities, Nexploit allows developers to scan multiple targets, uncover security vulnerabilities without false positives, get detailed reports on every finding,  and quickly fix security issues by following the remediation guidelines. 
+[NeuraLegion](https://www.neuralegion.com) is a powerful dynamic application & API security testing (DAST) platform that security teams trust and developers love.
 
-Nexploit is built to solve the core security tasks of your applications and APIs:
-* 👾 Finding Vulnerabilities (Issues) – As well as finding OWASP Top 10  technical issues (and much more) in your applications, NexPloit’s AI Engine automatically detects unknown Zero-Day and Business-Logic Flow issues, reducing lengthy and costly manual testing, as well as providing False Positive Free reporting and remediation guidelines. 
-* 🚀 Security Testing Automation – Nexploit enables seamless integration into your Software Development Life Cycle (SDLC). As the only solution that has automated Zero-Day detection, our False Positive Free reports are generated in real-time, with pinpoint code instrumentation, empowering your DevOps to the highest security standards, without losing development speed or agility. 
-* 🔐 Security Standard Compliance – Nexploit provides you with a comprehensive scanning flow which simplifies your compliance validation process and provides instant reports on identified issues that accelerate your confirmation process. Nexploit enables you to firmly comply with the standards of OWASP Top 10 technical issues, ISO/IEC 27001, PCI DSS, CWE/SANS, and more.
+### Automatically Tests Every Aspect of Your Apps & APIs
+
+Scans any target, whether Web Apps, APIs (REST. & SOAP, GraphQL & more), Web sockets or mobile, providing actionable reports
+
+### Seamlessly integrates with the Tools and Workflows You Already Use
+
+NeuraLegion works with your existing CI/CD pipelines – trigger scans on every commit, pull request or build with unit testing.
+
+### Spin-Up, Configure and Control Scans with Code
+
+One file. One command. One scan. No UI needed.
+
+### Super-Fast Scans
+
+Interacts with applications and APIs, instead of just crawling them and guessing.
+Scans are fast as our AI-powered engine can understand application architecture and generate sophisticated and targeted attacks.
+
+### No False Positives
+
+Stop chasing ghosts and wasting time. NeuraLegion doesn’t return false positives, so you can focus on releasing code.
+
+### Comprehensive Security Testing
+
+NeuraLegion tests for all common vulnerabilities, such as SQL injection, CSRF, XSS, and XXE -- as well as uncommon vulnerabilities, such as business logic vulnerabilities.
 
 More information is available on NeuraLegion’s:
 * [Website](https://www.neuralegion.com/)
@@ -17,9 +37,7 @@ More information is available on NeuraLegion’s:
 * [YouTube channel](https://www.youtube.com/channel/UCoIC0T1pmozq3eKLsUR2uUw)
 * [GitHub Actions](https://github.com/marketplace?query=neuralegion+)
 
-Improve your app security by integrating NexPloit into your CI pipeline - trigger scans on every commit, pull request or build with unit testing.
-
-## Inputs
+# Inputs
 
 ### `name`
 
@@ -35,7 +53,7 @@ _Example:_ `--token ${{ secrets.NEXPLOIT_TOKEN }})`
 
 ### `restart_scan`
 
-**Required**. ID of an existing scan to be restarted. You can get the scan ID in the Scans section on [nexploit.app](https://nexploit.app/login).
+**Required** when restarting an existing scan by its ID. You can get the scan ID in the Scans section on [nexploit.app](https://nexploit.app/login).<br> Please make sure to only use the necessary parameters. Otherwise, you will get a response with the parameter usage requirements.    
 
 _Example:_ `restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ)`
 
@@ -44,7 +62,8 @@ _Example:_ `restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ)`
 **Required**. Array of discovery types. The following types are available:
 * `archive` - uses an uploaded HAR-file for a scan
 * `crawler` - uses a crawler to define the attack surface for a scan
-* `oas` - uses an uploaded OpenAPI schema for a scan
+* `oas` - uses an uploaded OpenAPI schema for a scan <br>
+ If no discovery type is specified, `crawler` is applied by default.
 
 _Example:_
 
@@ -55,7 +74,7 @@ discovery_types: |
 
 ### `file_id`
 
-**Required**. ID of a HAR-file you want to use for a scan.  You can get the ID of an uploaded HAR-file in the **Storage** section on [nexploit.app](https://nexploit.app/login).
+**Required** if the discovery type is set to `archive` or `oas`. ID of a HAR-file or an OpenAPI schema you want to use for a scan. You can get the ID of an uploaded HAR-file or an OpenAPI schema in the **Storage** section on [nexploit.app](https://nexploit.app/login).
 
 _Example:_
 
@@ -68,7 +87,7 @@ FILE_ID=$(nexploit-cli archive:upload   \
 
 ### `crawler_urls`
 
-**Required**. Target URLs to be used by the crawler to define the attack surface.
+**Required** if the discovery type is set to `crawler`. Target URLs to be used by the crawler to define the attack surface.
 
 _Example:_
 
@@ -79,7 +98,7 @@ crawler_urls: |
 
 ### `hosts_filter`
 
-**Optional**. Allows selecting specific hosts for a scan. 
+**Required** when the the discovery type is set to `archive`. Allows selecting specific hosts for a scan. 
 
 ## Outputs
 
@@ -87,7 +106,11 @@ crawler_urls: |
 
 Url of the resulting scan
 
-## Usage Example
+### `id`
+
+ID of the created scan. This ID could then be used to restart the scan.
+
+## Example usage
 
 ### Start a new scan with parameters
 
