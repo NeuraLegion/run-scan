@@ -43,13 +43,13 @@ More information is available on NeuraLegion’s:
 
 **Required**. Scan name.
 
-_Example:_ ```name: GitHub scan ${{ github.sha }}```
+_Example:_ `name: GitHub scan ${{ github.sha }}`
 
 ### `api_token`
 
 **Required**. Your Nexploit API authorization token (key). You can generate it in the **Organization** section on [nexploit.app](https://nexploit.app/login). Find more information [here](https://kb.neuralegion.com/#/guide/np-web-ui/advanced-set-up/managing-org?id=managing-organization-apicli-authentication-tokens).
 
-_Example:_ `--token ${{ secrets.NEXPLOIT_TOKEN }})`
+_Example:_ `api_token: ${{ secrets.NEXPLOIT_TOKEN }}`
 
 ### `restart_scan`
 
