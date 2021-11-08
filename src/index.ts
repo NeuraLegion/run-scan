@@ -30,7 +30,7 @@ function getArray(inputName: string): string[] | undefined {
   }
 }
 
-const baseUrl = hostname ? `https://${hostname}` : 'https://nexploit.app';
+const baseUrl = hostname ? `https://${hostname}` : 'https://app.neuralegion.com';
 
 const restc: rm.RestClient = new rm.RestClient('GitHub Actions', baseUrl);
 
