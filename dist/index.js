@@ -63,7 +63,7 @@ function getArray(inputName) {
         return undefined;
     }
 }
-const baseUrl = hostname ? `https://${hostname}` : 'https://nexploit.app';
+const baseUrl = hostname ? `https://${hostname}` : 'https://app.neuralegion.com';
 const restc = new rm.RestClient('GitHub Actions', baseUrl);
 function retest(token, uuid, scanName) {
     return __awaiter(this, void 0, void 0, function* () {

@@ -1,6 +1,6 @@
-# Run a Nexploit Scan
+# Run a NeuraLegion Scan
 
-This action runs a new security scan in Nexploit, or reruns an existing one.
+This action runs a new security scan in NeuraLegion, or reruns an existing one.
 
 ### Build Secure Apps & APIs. Fast.
 
@@ -47,13 +47,15 @@ _Example:_ `name: GitHub scan ${{ github.sha }}`
 
 ### `api_token`
 
-**Required**. Your Nexploit API authorization token (key). You can generate it in the **Organization** section on [nexploit.app](https://nexploit.app/login). Find more information [here](https://kb.neuralegion.com/#/guide/np-web-ui/advanced-set-up/managing-org?id=managing-organization-apicli-authentication-tokens).
+**Required**. Your NeuraLegion API authorization token (key). You can generate it in the **Organization** section on [app.neuralegion.com](https://app.neuralegion.com/login). Find more information [here](https://docs.neuralegion.com/docs/manage-your-organization#manage-organization-apicli-authentication-tokens).
 
-_Example:_ `api_token: ${{ secrets.NEXPLOIT_TOKEN }}`
+_Example:_ `api_token: ${{ secrets.NEURALEGION_TOKEN }}`
 
 ### `restart_scan`
 
-**Required** when restarting an existing scan by its ID. You can get the scan ID in the Scans section on [nexploit.app](https://nexploit.app/login).<br> Please make sure to only use the necessary parameters. Otherwise, you will get a response with the parameter usage requirements.    
+**Required** when restarting an existing scan by its ID. You can get the scan ID in the Scans section on [app.neuralegion.com](https://app.neuralegion.com/login).
+
+Please make sure to only use the necessary parameters. Otherwise, you will get a response with the parameter usage requirements.    
 
 _Example:_ `restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ)`
 
@@ -74,13 +76,13 @@ discovery_types: |
 
 ### `file_id`
 
-**Required** if the discovery type is set to `archive` or `oas`. ID of a HAR-file or an OpenAPI schema you want to use for a scan. You can get the ID of an uploaded HAR-file or an OpenAPI schema in the **Storage** section on [nexploit.app](https://nexploit.app/login).
+**Required** if the discovery type is set to `archive` or `oas`. ID of a HAR-file or an OpenAPI schema you want to use for a scan. You can get the ID of an uploaded HAR-file or an OpenAPI schema in the **Storage** section on [app.neuralegion.com](https://app.neuralegion.com/login).
 
 _Example:_
 
 ```
 FILE_ID=$(nexploit-cli archive:upload   \
---token ${{ secrets.NEXPLOIT_TOKEN }}   \
+--token ${{ secrets.NEURALEGION_TOKEN }}   \
 --discard true                          \
 ./example.har)
 ```
@@ -109,8 +111,8 @@ Url of the resulting scan
 ### `id`
 
 ID of the created scan. This ID could then be used to restart the scan, or for the following GitHub actions:
-* [Nexploit Wait for Issues](https://github.com/marketplace/actions/nexploit-wait-for-issues)
-* [Nexploit Stop Scan](https://github.com/marketplace/actions/nexploit-stop-scan)
+* [NeuraLegion Wait for Issues](https://github.com/marketplace/actions/nexploit-wait-for-issues)
+* [NeuraLegion Stop Scan](https://github.com/marketplace/actions/nexploit-stop-scan)
 
 ## Example usage
 
@@ -118,11 +120,11 @@ ID of the created scan. This ID could then be used to restart the scan, or for t
 
 ```yml
 steps:
-    - name: Start Nexploit Scan
+    - name: Start NeuraLegion Scan
       id: start
       uses: NeuraLegion/run-scan@v1.1
       with:
-        api_token: ${{ secrets.NEXPLOIT_TOKEN }}
+        api_token: ${{ secrets.NEURALEGION_TOKEN }}
         name: GitHub scan ${{ github.sha }}
         discovery_types: |
           [ "crawler", "archive" ]
@@ -139,11 +141,11 @@ steps:
 
 ```yml
 steps:
-    - name: Start Nexploit Scan
+    - name: Start NeuraLegion Scan
       id: start
       uses: NeuraLegion/run-scan@v1.1
       with:
-        api_token: ${{ secrets.NEXPLOIT_TOKEN }}
+        api_token: ${{ secrets.NEURALEGION_TOKEN }}
         name: GitHub scan ${{ github.sha }}
         restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
     - name: Get the output scan url
