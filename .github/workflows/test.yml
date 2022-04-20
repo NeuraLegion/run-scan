@@ -24,7 +24,7 @@ jobs:
         cp README.md release/
         cp action.yml release/
         cp -R dist/ release/dist/
-    - name: Start Bright Scan 🏁
+    - name: Start NeuraLegion Scan 🏁
       uses: ./release
       with:
         api_token: ${{ secrets.NEXPLOIT_TOKEN }}
