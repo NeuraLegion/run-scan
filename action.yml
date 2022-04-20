@@ -1,5 +1,5 @@
-name: 'Run a NeuraLegion Scan'
-description: 'Run a NeuraLegion scan right in GitHub Action'
+name: 'Run a Bright Scan'
+description: 'Run a Bright scan right in GitHub Action'
 branding:
   icon: 'upload-cloud'
   color: 'blue'
