@@ -120,7 +120,7 @@ ID of the created scan. This ID could then be used to restart the scan, or for t
 
 ```yml
 steps:
-    - name: Start Bright Scan
+    - name: Start NeuraLegion Scan
       id: start
       uses: NeuraLegion/run-scan@v1.1
       with:
@@ -141,7 +141,7 @@ steps:
 
 ```yml
 steps:
-    - name: Start Bright Scan
+    - name: Start NeuraLegion Scan
       id: start
       uses: NeuraLegion/run-scan@v1.1
       with:
