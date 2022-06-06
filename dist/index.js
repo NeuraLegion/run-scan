@@ -8,7 +8,11 @@
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -36,79 +40,71 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(186));
-const rm = __importStar(__nccwpck_require__(405));
+const http_client_1 = __nccwpck_require__(255);
+const getArray = (inputName) => {
+    const input = core.getInput(inputName);
+    try {
+        const elements = JSON.parse(input);
+        return elements instanceof Array ? elements : undefined;
+    }
+    catch (err) {
+        core.debug(inputName + ` failed: ${err}` + ' => ' + input);
+    }
+};
 const apiToken = core.getInput('api_token');
 const restartScanID = core.getInput('restart_scan');
 const name = core.getInput('name');
 const fileId = core.getInput('file_id');
 const crawlerUrls = getArray('crawler_urls');
+const excludedParams = getArray('exclude_params');
+const excludedEntryPoints = getArray('exclude_entry_points');
 const discoveryTypesIn = getArray('discovery_types');
 const module_in = core.getInput('module');
 const hostsFilter = getArray('hosts_filter');
 const type = core.getInput('type');
 const hostname = core.getInput('hostname');
-function getArray(inputName) {
-    const input = core.getInput(inputName);
+const baseUrl = hostname
+    ? `https://${hostname}`
+    : 'https://app.neuralegion.com';
+const client = new http_client_1.HttpClient('GitHub Actions', [], {
+    allowRetries: true,
+    maxRetries: 5,
+    headers: { authorization: `Api-Key ${apiToken}` }
+});
+const retest = (uuid, scanName) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const elements = JSON.parse(input);
-        if (elements instanceof Array) {
-            return elements.length ? elements : undefined;
+        const response = yield client.postJson(`${baseUrl}/api/v1/scans/${uuid}/retest`, { name: scanName || 'GitHub Actions' });
+        if (response.statusCode < 300 && response.result) {
+            const { result } = response;
+            const url = `${baseUrl}/scans/${result.id}`;
+            core.setOutput('url', url);
+            core.setOutput('id', result.id);
         }
         else {
-            return undefined;
+            core.setFailed(`Failed retest. Status code: ${response.statusCode}`);
         }
     }
     catch (err) {
-        core.debug(inputName + ` failed: ${err}` + ' => ' + input);
-        return undefined;
+        core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
     }
-}
-const baseUrl = hostname ? `https://${hostname}` : 'https://app.neuralegion.com';
-const restc = new rm.RestClient('GitHub Actions', baseUrl);
-function retest(token, uuid, scanName) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const options = {
-                additionalHeaders: { Authorization: `Api-Key ${token}` }
-            };
-            const restRes = yield restc.create(`api/v1/scans/${uuid}/retest`, { name: scanName || 'GitHub Actions' }, options);
-            if (restRes.statusCode < 300 && restRes.result) {
-                const url = `${baseUrl}/scans/${restRes.result.id}`;
-                core.setOutput('url', url);
-                core.setOutput('id', restRes.result.id);
-            }
-            else {
-                core.setFailed(`Failed retest. Status code: ${restRes.statusCode}`);
-            }
+});
+const create = (scan) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const response = yield client.postJson(`${baseUrl}/api/v1/scans`, scan);
+        if (response.statusCode < 300 && response.result) {
+            const { result } = response;
+            const url = `${baseUrl}/scans/${result.id}`;
+            core.setOutput('url', url);
+            core.setOutput('id', result.id);
         }
-        catch (err) {
-            core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
+        else {
+            core.setFailed(`Failed create scan. Status code: ${response.statusCode}`);
         }
-    });
-}
-function create(token, scan) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let restRes;
-        try {
-            const options = {
-                additionalHeaders: { Authorization: `Api-Key ${token}` }
-            };
-            restRes = yield restc.create('api/v1/scans/', scan, options);
-            if (restRes.result && restRes.statusCode < 300) {
-                const id = restRes.result.id;
-                const url = `${baseUrl}/scans/${id}`;
-                core.setOutput('url', url);
-                core.setOutput('id', id);
-            }
-            else {
-                core.setFailed(`Failed create scan. Status code: ${restRes.statusCode}`);
-            }
-        }
-        catch (err) {
-            core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
-        }
-    });
-}
+    }
+    catch (err) {
+        core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
+    }
+});
 if (restartScanID) {
     if (!(fileId ||
         crawlerUrls ||
@@ -116,7 +112,7 @@ if (restartScanID) {
         module_in ||
         hostsFilter ||
         type)) {
-        retest(apiToken, restartScanID, name);
+        retest(restartScanID, name);
     }
     else {
         core.setFailed("You don't need parameters, other than api_token, restart_scan and name, if you just want to restart an existing scan");
@@ -124,14 +120,20 @@ if (restartScanID) {
 }
 else {
     const module = module_in || 'dast';
-    const discoveryTypes = discoveryTypesIn || ['archive'];
-    create(apiToken, {
+    const discoveryTypes = !(discoveryTypesIn === null || discoveryTypesIn === void 0 ? void 0 : discoveryTypesIn.length)
+        ? ['archive']
+        : discoveryTypesIn;
+    create({
         name,
         discoveryTypes,
         module,
         crawlerUrls,
         fileId,
-        hostsFilter
+        hostsFilter,
+        exclusions: {
+            requests: excludedEntryPoints,
+            params: excludedParams
+        }
     });
 }
 
@@ -271,12 +273,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
+exports.getIDToken = exports.getState = exports.saveState = exports.group = exports.endGroup = exports.startGroup = exports.info = exports.notice = exports.warning = exports.error = exports.debug = exports.isDebug = exports.setFailed = exports.setCommandEcho = exports.setOutput = exports.getBooleanInput = exports.getMultilineInput = exports.getInput = exports.addPath = exports.setSecret = exports.exportVariable = exports.ExitCode = void 0;
 const command_1 = __nccwpck_require__(351);
 const file_command_1 = __nccwpck_require__(717);
 const utils_1 = __nccwpck_require__(278);
 const os = __importStar(__nccwpck_require__(37));
 const path = __importStar(__nccwpck_require__(17));
+const oidc_utils_1 = __nccwpck_require__(41);
 /**
  * The code to exit an action
  */
@@ -545,6 +548,22 @@ function getState(name) {
     return process.env[`STATE_${name}`] || '';
 }
 exports.getState = getState;
+function getIDToken(aud) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield oidc_utils_1.OidcClient.getIDToken(aud);
+    });
+}
+exports.getIDToken = getIDToken;
+/**
+ * Summary exports
+ */
+var summary_1 = __nccwpck_require__(327);
+Object.defineProperty(exports, "summary", ({ enumerable: true, get: function () { return summary_1.summary; } }));
+/**
+ * @deprecated use core.summary
+ */
+var summary_2 = __nccwpck_require__(327);
+Object.defineProperty(exports, "markdownSummary", ({ enumerable: true, get: function () { return summary_2.markdownSummary; } }));
 //# sourceMappingURL=core.js.map
 
 /***/ }),
@@ -598,6 +617,380 @@ exports.issueCommand = issueCommand;
 
 /***/ }),
 
+/***/ 41:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OidcClient = void 0;
+const http_client_1 = __nccwpck_require__(255);
+const auth_1 = __nccwpck_require__(526);
+const core_1 = __nccwpck_require__(186);
+class OidcClient {
+    static createHttpClient(allowRetry = true, maxRetry = 10) {
+        const requestOptions = {
+            allowRetries: allowRetry,
+            maxRetries: maxRetry
+        };
+        return new http_client_1.HttpClient('actions/oidc-client', [new auth_1.BearerCredentialHandler(OidcClient.getRequestToken())], requestOptions);
+    }
+    static getRequestToken() {
+        const token = process.env['ACTIONS_ID_TOKEN_REQUEST_TOKEN'];
+        if (!token) {
+            throw new Error('Unable to get ACTIONS_ID_TOKEN_REQUEST_TOKEN env variable');
+        }
+        return token;
+    }
+    static getIDTokenUrl() {
+        const runtimeUrl = process.env['ACTIONS_ID_TOKEN_REQUEST_URL'];
+        if (!runtimeUrl) {
+            throw new Error('Unable to get ACTIONS_ID_TOKEN_REQUEST_URL env variable');
+        }
+        return runtimeUrl;
+    }
+    static getCall(id_token_url) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const httpclient = OidcClient.createHttpClient();
+            const res = yield httpclient
+                .getJson(id_token_url)
+                .catch(error => {
+                throw new Error(`Failed to get ID Token. \n 
+        Error Code : ${error.statusCode}\n 
+        Error Message: ${error.result.message}`);
+            });
+            const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
+            if (!id_token) {
+                throw new Error('Response json body do not have ID Token field');
+            }
+            return id_token;
+        });
+    }
+    static getIDToken(audience) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // New ID Token is requested from action service
+                let id_token_url = OidcClient.getIDTokenUrl();
+                if (audience) {
+                    const encodedAudience = encodeURIComponent(audience);
+                    id_token_url = `${id_token_url}&audience=${encodedAudience}`;
+                }
+                core_1.debug(`ID token url is ${id_token_url}`);
+                const id_token = yield OidcClient.getCall(id_token_url);
+                core_1.setSecret(id_token);
+                return id_token;
+            }
+            catch (error) {
+                throw new Error(`Error message: ${error.message}`);
+            }
+        });
+    }
+}
+exports.OidcClient = OidcClient;
+//# sourceMappingURL=oidc-utils.js.map
+
+/***/ }),
+
+/***/ 327:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = void 0;
+const os_1 = __nccwpck_require__(37);
+const fs_1 = __nccwpck_require__(147);
+const { access, appendFile, writeFile } = fs_1.promises;
+exports.SUMMARY_ENV_VAR = 'GITHUB_STEP_SUMMARY';
+exports.SUMMARY_DOCS_URL = 'https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary';
+class Summary {
+    constructor() {
+        this._buffer = '';
+    }
+    /**
+     * Finds the summary file path from the environment, rejects if env var is not found or file does not exist
+     * Also checks r/w permissions.
+     *
+     * @returns step summary file path
+     */
+    filePath() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._filePath) {
+                return this._filePath;
+            }
+            const pathFromEnv = process.env[exports.SUMMARY_ENV_VAR];
+            if (!pathFromEnv) {
+                throw new Error(`Unable to find environment variable for $${exports.SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
+            }
+            try {
+                yield access(pathFromEnv, fs_1.constants.R_OK | fs_1.constants.W_OK);
+            }
+            catch (_a) {
+                throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
+            }
+            this._filePath = pathFromEnv;
+            return this._filePath;
+        });
+    }
+    /**
+     * Wraps content in an HTML tag, adding any HTML attributes
+     *
+     * @param {string} tag HTML tag to wrap
+     * @param {string | null} content content within the tag
+     * @param {[attribute: string]: string} attrs key-value list of HTML attributes to add
+     *
+     * @returns {string} content wrapped in HTML element
+     */
+    wrap(tag, content, attrs = {}) {
+        const htmlAttrs = Object.entries(attrs)
+            .map(([key, value]) => ` ${key}="${value}"`)
+            .join('');
+        if (!content) {
+            return `<${tag}${htmlAttrs}>`;
+        }
+        return `<${tag}${htmlAttrs}>${content}</${tag}>`;
+    }
+    /**
+     * Writes text in the buffer to the summary buffer file and empties buffer. Will append by default.
+     *
+     * @param {SummaryWriteOptions} [options] (optional) options for write operation
+     *
+     * @returns {Promise<Summary>} summary instance
+     */
+    write(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const overwrite = !!(options === null || options === void 0 ? void 0 : options.overwrite);
+            const filePath = yield this.filePath();
+            const writeFunc = overwrite ? writeFile : appendFile;
+            yield writeFunc(filePath, this._buffer, { encoding: 'utf8' });
+            return this.emptyBuffer();
+        });
+    }
+    /**
+     * Clears the summary buffer and wipes the summary file
+     *
+     * @returns {Summary} summary instance
+     */
+    clear() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.emptyBuffer().write({ overwrite: true });
+        });
+    }
+    /**
+     * Returns the current summary buffer as a string
+     *
+     * @returns {string} string of summary buffer
+     */
+    stringify() {
+        return this._buffer;
+    }
+    /**
+     * If the summary buffer is empty
+     *
+     * @returns {boolen} true if the buffer is empty
+     */
+    isEmptyBuffer() {
+        return this._buffer.length === 0;
+    }
+    /**
+     * Resets the summary buffer without writing to summary file
+     *
+     * @returns {Summary} summary instance
+     */
+    emptyBuffer() {
+        this._buffer = '';
+        return this;
+    }
+    /**
+     * Adds raw text to the summary buffer
+     *
+     * @param {string} text content to add
+     * @param {boolean} [addEOL=false] (optional) append an EOL to the raw text (default: false)
+     *
+     * @returns {Summary} summary instance
+     */
+    addRaw(text, addEOL = false) {
+        this._buffer += text;
+        return addEOL ? this.addEOL() : this;
+    }
+    /**
+     * Adds the operating system-specific end-of-line marker to the buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addEOL() {
+        return this.addRaw(os_1.EOL);
+    }
+    /**
+     * Adds an HTML codeblock to the summary buffer
+     *
+     * @param {string} code content to render within fenced code block
+     * @param {string} lang (optional) language to syntax highlight code
+     *
+     * @returns {Summary} summary instance
+     */
+    addCodeBlock(code, lang) {
+        const attrs = Object.assign({}, (lang && { lang }));
+        const element = this.wrap('pre', this.wrap('code', code), attrs);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML list to the summary buffer
+     *
+     * @param {string[]} items list of items to render
+     * @param {boolean} [ordered=false] (optional) if the rendered list should be ordered or not (default: false)
+     *
+     * @returns {Summary} summary instance
+     */
+    addList(items, ordered = false) {
+        const tag = ordered ? 'ol' : 'ul';
+        const listItems = items.map(item => this.wrap('li', item)).join('');
+        const element = this.wrap(tag, listItems);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML table to the summary buffer
+     *
+     * @param {SummaryTableCell[]} rows table rows
+     *
+     * @returns {Summary} summary instance
+     */
+    addTable(rows) {
+        const tableBody = rows
+            .map(row => {
+            const cells = row
+                .map(cell => {
+                if (typeof cell === 'string') {
+                    return this.wrap('td', cell);
+                }
+                const { header, data, colspan, rowspan } = cell;
+                const tag = header ? 'th' : 'td';
+                const attrs = Object.assign(Object.assign({}, (colspan && { colspan })), (rowspan && { rowspan }));
+                return this.wrap(tag, data, attrs);
+            })
+                .join('');
+            return this.wrap('tr', cells);
+        })
+            .join('');
+        const element = this.wrap('table', tableBody);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds a collapsable HTML details element to the summary buffer
+     *
+     * @param {string} label text for the closed state
+     * @param {string} content collapsable content
+     *
+     * @returns {Summary} summary instance
+     */
+    addDetails(label, content) {
+        const element = this.wrap('details', this.wrap('summary', label) + content);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML image tag to the summary buffer
+     *
+     * @param {string} src path to the image you to embed
+     * @param {string} alt text description of the image
+     * @param {SummaryImageOptions} options (optional) addition image attributes
+     *
+     * @returns {Summary} summary instance
+     */
+    addImage(src, alt, options) {
+        const { width, height } = options || {};
+        const attrs = Object.assign(Object.assign({}, (width && { width })), (height && { height }));
+        const element = this.wrap('img', null, Object.assign({ src, alt }, attrs));
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML section heading element
+     *
+     * @param {string} text heading text
+     * @param {number | string} [level=1] (optional) the heading level, default: 1
+     *
+     * @returns {Summary} summary instance
+     */
+    addHeading(text, level) {
+        const tag = `h${level}`;
+        const allowedTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
+            ? tag
+            : 'h1';
+        const element = this.wrap(allowedTag, text);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML thematic break (<hr>) to the summary buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addSeparator() {
+        const element = this.wrap('hr', null);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML line break (<br>) to the summary buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addBreak() {
+        const element = this.wrap('br', null);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML blockquote to the summary buffer
+     *
+     * @param {string} text quote text
+     * @param {string} cite (optional) citation url
+     *
+     * @returns {Summary} summary instance
+     */
+    addQuote(text, cite) {
+        const attrs = Object.assign({}, (cite && { cite }));
+        const element = this.wrap('blockquote', text, attrs);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML anchor tag to the summary buffer
+     *
+     * @param {string} text link text/content
+     * @param {string} href hyperlink
+     *
+     * @returns {Summary} summary instance
+     */
+    addLink(text, href) {
+        const element = this.wrap('a', text, { href });
+        return this.addRaw(element).addEOL();
+    }
+}
+const _summary = new Summary();
+/**
+ * @deprecated use `core.summary`
+ */
+exports.markdownSummary = _summary;
+exports.summary = _summary;
+//# sourceMappingURL=summary.js.map
+
+/***/ }),
+
 /***/ 278:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -633,6 +1026,7 @@ function toCommandProperties(annotationProperties) {
     }
     return {
         title: annotationProperties.title,
+        file: annotationProperties.file,
         line: annotationProperties.startLine,
         endLine: annotationProperties.endLine,
         col: annotationProperties.startColumn,
@@ -644,863 +1038,771 @@ exports.toCommandProperties = toCommandProperties;
 
 /***/ }),
 
-/***/ 907:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ 526:
+/***/ (function(__unused_webpack_module, exports) {
 
 "use strict";
 
-
-var replace = String.prototype.replace;
-var percentTwenties = /%20/g;
-
-var util = __nccwpck_require__(360);
-
-var Format = {
-    RFC1738: 'RFC1738',
-    RFC3986: 'RFC3986'
-};
-
-module.exports = util.assign(
-    {
-        'default': Format.RFC3986,
-        formatters: {
-            RFC1738: function (value) {
-                return replace.call(value, percentTwenties, '+');
-            },
-            RFC3986: function (value) {
-                return String(value);
-            }
-        }
-    },
-    Format
-);
-
-
-/***/ }),
-
-/***/ 760:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-var stringify = __nccwpck_require__(954);
-var parse = __nccwpck_require__(912);
-var formats = __nccwpck_require__(907);
-
-module.exports = {
-    formats: formats,
-    parse: parse,
-    stringify: stringify
-};
-
-
-/***/ }),
-
-/***/ 912:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-var utils = __nccwpck_require__(360);
-
-var has = Object.prototype.hasOwnProperty;
-var isArray = Array.isArray;
-
-var defaults = {
-    allowDots: false,
-    allowPrototypes: false,
-    arrayLimit: 20,
-    charset: 'utf-8',
-    charsetSentinel: false,
-    comma: false,
-    decoder: utils.decode,
-    delimiter: '&',
-    depth: 5,
-    ignoreQueryPrefix: false,
-    interpretNumericEntities: false,
-    parameterLimit: 1000,
-    parseArrays: true,
-    plainObjects: false,
-    strictNullHandling: false
-};
-
-var interpretNumericEntities = function (str) {
-    return str.replace(/&#(\d+);/g, function ($0, numberStr) {
-        return String.fromCharCode(parseInt(numberStr, 10));
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-
-var parseArrayValue = function (val, options) {
-    if (val && typeof val === 'string' && options.comma && val.indexOf(',') > -1) {
-        return val.split(',');
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PersonalAccessTokenCredentialHandler = exports.BearerCredentialHandler = exports.BasicCredentialHandler = void 0;
+class BasicCredentialHandler {
+    constructor(username, password) {
+        this.username = username;
+        this.password = password;
     }
-
-    return val;
-};
-
-var maybeMap = function maybeMap(val, fn) {
-    if (isArray(val)) {
-        var mapped = [];
-        for (var i = 0; i < val.length; i += 1) {
-            mapped.push(fn(val[i]));
+    prepareRequest(options) {
+        if (!options.headers) {
+            throw Error('The request has no headers');
         }
-        return mapped;
+        options.headers['Authorization'] = `Basic ${Buffer.from(`${this.username}:${this.password}`).toString('base64')}`;
     }
-    return fn(val);
-};
-
-// This is what browsers will submit when the ✓ character occurs in an
-// application/x-www-form-urlencoded body and the encoding of the page containing
-// the form is iso-8859-1, or when the submitted form has an accept-charset
-// attribute of iso-8859-1. Presumably also with other charsets that do not contain
-// the ✓ character, such as us-ascii.
-var isoSentinel = 'utf8=%26%2310003%3B'; // encodeURIComponent('&#10003;')
-
-// These are the percent-encoded utf-8 octets representing a checkmark, indicating that the request actually is utf-8 encoded.
-var charsetSentinel = 'utf8=%E2%9C%93'; // encodeURIComponent('✓')
-
-var parseValues = function parseQueryStringValues(str, options) {
-    var obj = {};
-    var cleanStr = options.ignoreQueryPrefix ? str.replace(/^\?/, '') : str;
-    var limit = options.parameterLimit === Infinity ? undefined : options.parameterLimit;
-    var parts = cleanStr.split(options.delimiter, limit);
-    var skipIndex = -1; // Keep track of where the utf8 sentinel was found
-    var i;
-
-    var charset = options.charset;
-    if (options.charsetSentinel) {
-        for (i = 0; i < parts.length; ++i) {
-            if (parts[i].indexOf('utf8=') === 0) {
-                if (parts[i] === charsetSentinel) {
-                    charset = 'utf-8';
-                } else if (parts[i] === isoSentinel) {
-                    charset = 'iso-8859-1';
-                }
-                skipIndex = i;
-                i = parts.length; // The eslint settings do not allow break;
-            }
-        }
-    }
-
-    for (i = 0; i < parts.length; ++i) {
-        if (i === skipIndex) {
-            continue;
-        }
-        var part = parts[i];
-
-        var bracketEqualsPos = part.indexOf(']=');
-        var pos = bracketEqualsPos === -1 ? part.indexOf('=') : bracketEqualsPos + 1;
-
-        var key, val;
-        if (pos === -1) {
-            key = options.decoder(part, defaults.decoder, charset, 'key');
-            val = options.strictNullHandling ? null : '';
-        } else {
-            key = options.decoder(part.slice(0, pos), defaults.decoder, charset, 'key');
-            val = maybeMap(
-                parseArrayValue(part.slice(pos + 1), options),
-                function (encodedVal) {
-                    return options.decoder(encodedVal, defaults.decoder, charset, 'value');
-                }
-            );
-        }
-
-        if (val && options.interpretNumericEntities && charset === 'iso-8859-1') {
-            val = interpretNumericEntities(val);
-        }
-
-        if (part.indexOf('[]=') > -1) {
-            val = isArray(val) ? [val] : val;
-        }
-
-        if (has.call(obj, key)) {
-            obj[key] = utils.combine(obj[key], val);
-        } else {
-            obj[key] = val;
-        }
-    }
-
-    return obj;
-};
-
-var parseObject = function (chain, val, options, valuesParsed) {
-    var leaf = valuesParsed ? val : parseArrayValue(val, options);
-
-    for (var i = chain.length - 1; i >= 0; --i) {
-        var obj;
-        var root = chain[i];
-
-        if (root === '[]' && options.parseArrays) {
-            obj = [].concat(leaf);
-        } else {
-            obj = options.plainObjects ? Object.create(null) : {};
-            var cleanRoot = root.charAt(0) === '[' && root.charAt(root.length - 1) === ']' ? root.slice(1, -1) : root;
-            var index = parseInt(cleanRoot, 10);
-            if (!options.parseArrays && cleanRoot === '') {
-                obj = { 0: leaf };
-            } else if (
-                !isNaN(index)
-                && root !== cleanRoot
-                && String(index) === cleanRoot
-                && index >= 0
-                && (options.parseArrays && index <= options.arrayLimit)
-            ) {
-                obj = [];
-                obj[index] = leaf;
-            } else {
-                obj[cleanRoot] = leaf;
-            }
-        }
-
-        leaf = obj; // eslint-disable-line no-param-reassign
-    }
-
-    return leaf;
-};
-
-var parseKeys = function parseQueryStringKeys(givenKey, val, options, valuesParsed) {
-    if (!givenKey) {
-        return;
-    }
-
-    // Transform dot notation to bracket notation
-    var key = options.allowDots ? givenKey.replace(/\.([^.[]+)/g, '[$1]') : givenKey;
-
-    // The regex chunks
-
-    var brackets = /(\[[^[\]]*])/;
-    var child = /(\[[^[\]]*])/g;
-
-    // Get the parent
-
-    var segment = options.depth > 0 && brackets.exec(key);
-    var parent = segment ? key.slice(0, segment.index) : key;
-
-    // Stash the parent if it exists
-
-    var keys = [];
-    if (parent) {
-        // If we aren't using plain objects, optionally prefix keys that would overwrite object prototype properties
-        if (!options.plainObjects && has.call(Object.prototype, parent)) {
-            if (!options.allowPrototypes) {
-                return;
-            }
-        }
-
-        keys.push(parent);
-    }
-
-    // Loop through children appending to the array until we hit depth
-
-    var i = 0;
-    while (options.depth > 0 && (segment = child.exec(key)) !== null && i < options.depth) {
-        i += 1;
-        if (!options.plainObjects && has.call(Object.prototype, segment[1].slice(1, -1))) {
-            if (!options.allowPrototypes) {
-                return;
-            }
-        }
-        keys.push(segment[1]);
-    }
-
-    // If there's a remainder, just add whatever is left
-
-    if (segment) {
-        keys.push('[' + key.slice(segment.index) + ']');
-    }
-
-    return parseObject(keys, val, options, valuesParsed);
-};
-
-var normalizeParseOptions = function normalizeParseOptions(opts) {
-    if (!opts) {
-        return defaults;
-    }
-
-    if (opts.decoder !== null && opts.decoder !== undefined && typeof opts.decoder !== 'function') {
-        throw new TypeError('Decoder has to be a function.');
-    }
-
-    if (typeof opts.charset !== 'undefined' && opts.charset !== 'utf-8' && opts.charset !== 'iso-8859-1') {
-        throw new TypeError('The charset option must be either utf-8, iso-8859-1, or undefined');
-    }
-    var charset = typeof opts.charset === 'undefined' ? defaults.charset : opts.charset;
-
-    return {
-        allowDots: typeof opts.allowDots === 'undefined' ? defaults.allowDots : !!opts.allowDots,
-        allowPrototypes: typeof opts.allowPrototypes === 'boolean' ? opts.allowPrototypes : defaults.allowPrototypes,
-        arrayLimit: typeof opts.arrayLimit === 'number' ? opts.arrayLimit : defaults.arrayLimit,
-        charset: charset,
-        charsetSentinel: typeof opts.charsetSentinel === 'boolean' ? opts.charsetSentinel : defaults.charsetSentinel,
-        comma: typeof opts.comma === 'boolean' ? opts.comma : defaults.comma,
-        decoder: typeof opts.decoder === 'function' ? opts.decoder : defaults.decoder,
-        delimiter: typeof opts.delimiter === 'string' || utils.isRegExp(opts.delimiter) ? opts.delimiter : defaults.delimiter,
-        // eslint-disable-next-line no-implicit-coercion, no-extra-parens
-        depth: (typeof opts.depth === 'number' || opts.depth === false) ? +opts.depth : defaults.depth,
-        ignoreQueryPrefix: opts.ignoreQueryPrefix === true,
-        interpretNumericEntities: typeof opts.interpretNumericEntities === 'boolean' ? opts.interpretNumericEntities : defaults.interpretNumericEntities,
-        parameterLimit: typeof opts.parameterLimit === 'number' ? opts.parameterLimit : defaults.parameterLimit,
-        parseArrays: opts.parseArrays !== false,
-        plainObjects: typeof opts.plainObjects === 'boolean' ? opts.plainObjects : defaults.plainObjects,
-        strictNullHandling: typeof opts.strictNullHandling === 'boolean' ? opts.strictNullHandling : defaults.strictNullHandling
-    };
-};
-
-module.exports = function (str, opts) {
-    var options = normalizeParseOptions(opts);
-
-    if (str === '' || str === null || typeof str === 'undefined') {
-        return options.plainObjects ? Object.create(null) : {};
-    }
-
-    var tempObj = typeof str === 'string' ? parseValues(str, options) : str;
-    var obj = options.plainObjects ? Object.create(null) : {};
-
-    // Iterate over the keys and setup the new object
-
-    var keys = Object.keys(tempObj);
-    for (var i = 0; i < keys.length; ++i) {
-        var key = keys[i];
-        var newObj = parseKeys(key, tempObj[key], options, typeof str === 'string');
-        obj = utils.merge(obj, newObj, options);
-    }
-
-    return utils.compact(obj);
-};
-
-
-/***/ }),
-
-/***/ 954:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-var utils = __nccwpck_require__(360);
-var formats = __nccwpck_require__(907);
-var has = Object.prototype.hasOwnProperty;
-
-var arrayPrefixGenerators = {
-    brackets: function brackets(prefix) {
-        return prefix + '[]';
-    },
-    comma: 'comma',
-    indices: function indices(prefix, key) {
-        return prefix + '[' + key + ']';
-    },
-    repeat: function repeat(prefix) {
-        return prefix;
-    }
-};
-
-var isArray = Array.isArray;
-var push = Array.prototype.push;
-var pushToArray = function (arr, valueOrArray) {
-    push.apply(arr, isArray(valueOrArray) ? valueOrArray : [valueOrArray]);
-};
-
-var toISO = Date.prototype.toISOString;
-
-var defaultFormat = formats['default'];
-var defaults = {
-    addQueryPrefix: false,
-    allowDots: false,
-    charset: 'utf-8',
-    charsetSentinel: false,
-    delimiter: '&',
-    encode: true,
-    encoder: utils.encode,
-    encodeValuesOnly: false,
-    format: defaultFormat,
-    formatter: formats.formatters[defaultFormat],
-    // deprecated
-    indices: false,
-    serializeDate: function serializeDate(date) {
-        return toISO.call(date);
-    },
-    skipNulls: false,
-    strictNullHandling: false
-};
-
-var isNonNullishPrimitive = function isNonNullishPrimitive(v) {
-    return typeof v === 'string'
-        || typeof v === 'number'
-        || typeof v === 'boolean'
-        || typeof v === 'symbol'
-        || typeof v === 'bigint';
-};
-
-var stringify = function stringify(
-    object,
-    prefix,
-    generateArrayPrefix,
-    strictNullHandling,
-    skipNulls,
-    encoder,
-    filter,
-    sort,
-    allowDots,
-    serializeDate,
-    formatter,
-    encodeValuesOnly,
-    charset
-) {
-    var obj = object;
-    if (typeof filter === 'function') {
-        obj = filter(prefix, obj);
-    } else if (obj instanceof Date) {
-        obj = serializeDate(obj);
-    } else if (generateArrayPrefix === 'comma' && isArray(obj)) {
-        obj = obj.join(',');
-    }
-
-    if (obj === null) {
-        if (strictNullHandling) {
-            return encoder && !encodeValuesOnly ? encoder(prefix, defaults.encoder, charset, 'key') : prefix;
-        }
-
-        obj = '';
-    }
-
-    if (isNonNullishPrimitive(obj) || utils.isBuffer(obj)) {
-        if (encoder) {
-            var keyValue = encodeValuesOnly ? prefix : encoder(prefix, defaults.encoder, charset, 'key');
-            return [formatter(keyValue) + '=' + formatter(encoder(obj, defaults.encoder, charset, 'value'))];
-        }
-        return [formatter(prefix) + '=' + formatter(String(obj))];
-    }
-
-    var values = [];
-
-    if (typeof obj === 'undefined') {
-        return values;
-    }
-
-    var objKeys;
-    if (isArray(filter)) {
-        objKeys = filter;
-    } else {
-        var keys = Object.keys(obj);
-        objKeys = sort ? keys.sort(sort) : keys;
-    }
-
-    for (var i = 0; i < objKeys.length; ++i) {
-        var key = objKeys[i];
-
-        if (skipNulls && obj[key] === null) {
-            continue;
-        }
-
-        if (isArray(obj)) {
-            pushToArray(values, stringify(
-                obj[key],
-                typeof generateArrayPrefix === 'function' ? generateArrayPrefix(prefix, key) : prefix,
-                generateArrayPrefix,
-                strictNullHandling,
-                skipNulls,
-                encoder,
-                filter,
-                sort,
-                allowDots,
-                serializeDate,
-                formatter,
-                encodeValuesOnly,
-                charset
-            ));
-        } else {
-            pushToArray(values, stringify(
-                obj[key],
-                prefix + (allowDots ? '.' + key : '[' + key + ']'),
-                generateArrayPrefix,
-                strictNullHandling,
-                skipNulls,
-                encoder,
-                filter,
-                sort,
-                allowDots,
-                serializeDate,
-                formatter,
-                encodeValuesOnly,
-                charset
-            ));
-        }
-    }
-
-    return values;
-};
-
-var normalizeStringifyOptions = function normalizeStringifyOptions(opts) {
-    if (!opts) {
-        return defaults;
-    }
-
-    if (opts.encoder !== null && opts.encoder !== undefined && typeof opts.encoder !== 'function') {
-        throw new TypeError('Encoder has to be a function.');
-    }
-
-    var charset = opts.charset || defaults.charset;
-    if (typeof opts.charset !== 'undefined' && opts.charset !== 'utf-8' && opts.charset !== 'iso-8859-1') {
-        throw new TypeError('The charset option must be either utf-8, iso-8859-1, or undefined');
-    }
-
-    var format = formats['default'];
-    if (typeof opts.format !== 'undefined') {
-        if (!has.call(formats.formatters, opts.format)) {
-            throw new TypeError('Unknown format option provided.');
-        }
-        format = opts.format;
-    }
-    var formatter = formats.formatters[format];
-
-    var filter = defaults.filter;
-    if (typeof opts.filter === 'function' || isArray(opts.filter)) {
-        filter = opts.filter;
-    }
-
-    return {
-        addQueryPrefix: typeof opts.addQueryPrefix === 'boolean' ? opts.addQueryPrefix : defaults.addQueryPrefix,
-        allowDots: typeof opts.allowDots === 'undefined' ? defaults.allowDots : !!opts.allowDots,
-        charset: charset,
-        charsetSentinel: typeof opts.charsetSentinel === 'boolean' ? opts.charsetSentinel : defaults.charsetSentinel,
-        delimiter: typeof opts.delimiter === 'undefined' ? defaults.delimiter : opts.delimiter,
-        encode: typeof opts.encode === 'boolean' ? opts.encode : defaults.encode,
-        encoder: typeof opts.encoder === 'function' ? opts.encoder : defaults.encoder,
-        encodeValuesOnly: typeof opts.encodeValuesOnly === 'boolean' ? opts.encodeValuesOnly : defaults.encodeValuesOnly,
-        filter: filter,
-        formatter: formatter,
-        serializeDate: typeof opts.serializeDate === 'function' ? opts.serializeDate : defaults.serializeDate,
-        skipNulls: typeof opts.skipNulls === 'boolean' ? opts.skipNulls : defaults.skipNulls,
-        sort: typeof opts.sort === 'function' ? opts.sort : null,
-        strictNullHandling: typeof opts.strictNullHandling === 'boolean' ? opts.strictNullHandling : defaults.strictNullHandling
-    };
-};
-
-module.exports = function (object, opts) {
-    var obj = object;
-    var options = normalizeStringifyOptions(opts);
-
-    var objKeys;
-    var filter;
-
-    if (typeof options.filter === 'function') {
-        filter = options.filter;
-        obj = filter('', obj);
-    } else if (isArray(options.filter)) {
-        filter = options.filter;
-        objKeys = filter;
-    }
-
-    var keys = [];
-
-    if (typeof obj !== 'object' || obj === null) {
-        return '';
-    }
-
-    var arrayFormat;
-    if (opts && opts.arrayFormat in arrayPrefixGenerators) {
-        arrayFormat = opts.arrayFormat;
-    } else if (opts && 'indices' in opts) {
-        arrayFormat = opts.indices ? 'indices' : 'repeat';
-    } else {
-        arrayFormat = 'indices';
-    }
-
-    var generateArrayPrefix = arrayPrefixGenerators[arrayFormat];
-
-    if (!objKeys) {
-        objKeys = Object.keys(obj);
-    }
-
-    if (options.sort) {
-        objKeys.sort(options.sort);
-    }
-
-    for (var i = 0; i < objKeys.length; ++i) {
-        var key = objKeys[i];
-
-        if (options.skipNulls && obj[key] === null) {
-            continue;
-        }
-        pushToArray(keys, stringify(
-            obj[key],
-            key,
-            generateArrayPrefix,
-            options.strictNullHandling,
-            options.skipNulls,
-            options.encode ? options.encoder : null,
-            options.filter,
-            options.sort,
-            options.allowDots,
-            options.serializeDate,
-            options.formatter,
-            options.encodeValuesOnly,
-            options.charset
-        ));
-    }
-
-    var joined = keys.join(options.delimiter);
-    var prefix = options.addQueryPrefix === true ? '?' : '';
-
-    if (options.charsetSentinel) {
-        if (options.charset === 'iso-8859-1') {
-            // encodeURIComponent('&#10003;'), the "numeric entity" representation of a checkmark
-            prefix += 'utf8=%26%2310003%3B&';
-        } else {
-            // encodeURIComponent('✓')
-            prefix += 'utf8=%E2%9C%93&';
-        }
-    }
-
-    return joined.length > 0 ? prefix + joined : '';
-};
-
-
-/***/ }),
-
-/***/ 360:
-/***/ ((module) => {
-
-"use strict";
-
-
-var has = Object.prototype.hasOwnProperty;
-var isArray = Array.isArray;
-
-var hexTable = (function () {
-    var array = [];
-    for (var i = 0; i < 256; ++i) {
-        array.push('%' + ((i < 16 ? '0' : '') + i.toString(16)).toUpperCase());
-    }
-
-    return array;
-}());
-
-var compactQueue = function compactQueue(queue) {
-    while (queue.length > 1) {
-        var item = queue.pop();
-        var obj = item.obj[item.prop];
-
-        if (isArray(obj)) {
-            var compacted = [];
-
-            for (var j = 0; j < obj.length; ++j) {
-                if (typeof obj[j] !== 'undefined') {
-                    compacted.push(obj[j]);
-                }
-            }
-
-            item.obj[item.prop] = compacted;
-        }
-    }
-};
-
-var arrayToObject = function arrayToObject(source, options) {
-    var obj = options && options.plainObjects ? Object.create(null) : {};
-    for (var i = 0; i < source.length; ++i) {
-        if (typeof source[i] !== 'undefined') {
-            obj[i] = source[i];
-        }
-    }
-
-    return obj;
-};
-
-var merge = function merge(target, source, options) {
-    /* eslint no-param-reassign: 0 */
-    if (!source) {
-        return target;
-    }
-
-    if (typeof source !== 'object') {
-        if (isArray(target)) {
-            target.push(source);
-        } else if (target && typeof target === 'object') {
-            if ((options && (options.plainObjects || options.allowPrototypes)) || !has.call(Object.prototype, source)) {
-                target[source] = true;
-            }
-        } else {
-            return [target, source];
-        }
-
-        return target;
-    }
-
-    if (!target || typeof target !== 'object') {
-        return [target].concat(source);
-    }
-
-    var mergeTarget = target;
-    if (isArray(target) && !isArray(source)) {
-        mergeTarget = arrayToObject(target, options);
-    }
-
-    if (isArray(target) && isArray(source)) {
-        source.forEach(function (item, i) {
-            if (has.call(target, i)) {
-                var targetItem = target[i];
-                if (targetItem && typeof targetItem === 'object' && item && typeof item === 'object') {
-                    target[i] = merge(targetItem, item, options);
-                } else {
-                    target.push(item);
-                }
-            } else {
-                target[i] = item;
-            }
-        });
-        return target;
-    }
-
-    return Object.keys(source).reduce(function (acc, key) {
-        var value = source[key];
-
-        if (has.call(acc, key)) {
-            acc[key] = merge(acc[key], value, options);
-        } else {
-            acc[key] = value;
-        }
-        return acc;
-    }, mergeTarget);
-};
-
-var assign = function assignSingleSource(target, source) {
-    return Object.keys(source).reduce(function (acc, key) {
-        acc[key] = source[key];
-        return acc;
-    }, target);
-};
-
-var decode = function (str, decoder, charset) {
-    var strWithoutPlus = str.replace(/\+/g, ' ');
-    if (charset === 'iso-8859-1') {
-        // unescape never throws, no try...catch needed:
-        return strWithoutPlus.replace(/%[0-9a-f]{2}/gi, unescape);
-    }
-    // utf-8
-    try {
-        return decodeURIComponent(strWithoutPlus);
-    } catch (e) {
-        return strWithoutPlus;
-    }
-};
-
-var encode = function encode(str, defaultEncoder, charset) {
-    // This code was originally written by Brian White (mscdex) for the io.js core querystring library.
-    // It has been adapted here for stricter adherence to RFC 3986
-    if (str.length === 0) {
-        return str;
-    }
-
-    var string = str;
-    if (typeof str === 'symbol') {
-        string = Symbol.prototype.toString.call(str);
-    } else if (typeof str !== 'string') {
-        string = String(str);
-    }
-
-    if (charset === 'iso-8859-1') {
-        return escape(string).replace(/%u[0-9a-f]{4}/gi, function ($0) {
-            return '%26%23' + parseInt($0.slice(2), 16) + '%3B';
-        });
-    }
-
-    var out = '';
-    for (var i = 0; i < string.length; ++i) {
-        var c = string.charCodeAt(i);
-
-        if (
-            c === 0x2D // -
-            || c === 0x2E // .
-            || c === 0x5F // _
-            || c === 0x7E // ~
-            || (c >= 0x30 && c <= 0x39) // 0-9
-            || (c >= 0x41 && c <= 0x5A) // a-z
-            || (c >= 0x61 && c <= 0x7A) // A-Z
-        ) {
-            out += string.charAt(i);
-            continue;
-        }
-
-        if (c < 0x80) {
-            out = out + hexTable[c];
-            continue;
-        }
-
-        if (c < 0x800) {
-            out = out + (hexTable[0xC0 | (c >> 6)] + hexTable[0x80 | (c & 0x3F)]);
-            continue;
-        }
-
-        if (c < 0xD800 || c >= 0xE000) {
-            out = out + (hexTable[0xE0 | (c >> 12)] + hexTable[0x80 | ((c >> 6) & 0x3F)] + hexTable[0x80 | (c & 0x3F)]);
-            continue;
-        }
-
-        i += 1;
-        c = 0x10000 + (((c & 0x3FF) << 10) | (string.charCodeAt(i) & 0x3FF));
-        out += hexTable[0xF0 | (c >> 18)]
-            + hexTable[0x80 | ((c >> 12) & 0x3F)]
-            + hexTable[0x80 | ((c >> 6) & 0x3F)]
-            + hexTable[0x80 | (c & 0x3F)];
-    }
-
-    return out;
-};
-
-var compact = function compact(value) {
-    var queue = [{ obj: { o: value }, prop: 'o' }];
-    var refs = [];
-
-    for (var i = 0; i < queue.length; ++i) {
-        var item = queue[i];
-        var obj = item.obj[item.prop];
-
-        var keys = Object.keys(obj);
-        for (var j = 0; j < keys.length; ++j) {
-            var key = keys[j];
-            var val = obj[key];
-            if (typeof val === 'object' && val !== null && refs.indexOf(val) === -1) {
-                queue.push({ obj: obj, prop: key });
-                refs.push(val);
-            }
-        }
-    }
-
-    compactQueue(queue);
-
-    return value;
-};
-
-var isRegExp = function isRegExp(obj) {
-    return Object.prototype.toString.call(obj) === '[object RegExp]';
-};
-
-var isBuffer = function isBuffer(obj) {
-    if (!obj || typeof obj !== 'object') {
+    // This handler cannot handle 401
+    canHandleAuthentication() {
         return false;
     }
+    handleAuthentication() {
+        return __awaiter(this, void 0, void 0, function* () {
+            throw new Error('not implemented');
+        });
+    }
+}
+exports.BasicCredentialHandler = BasicCredentialHandler;
+class BearerCredentialHandler {
+    constructor(token) {
+        this.token = token;
+    }
+    // currently implements pre-authorization
+    // TODO: support preAuth = false where it hooks on 401
+    prepareRequest(options) {
+        if (!options.headers) {
+            throw Error('The request has no headers');
+        }
+        options.headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    // This handler cannot handle 401
+    canHandleAuthentication() {
+        return false;
+    }
+    handleAuthentication() {
+        return __awaiter(this, void 0, void 0, function* () {
+            throw new Error('not implemented');
+        });
+    }
+}
+exports.BearerCredentialHandler = BearerCredentialHandler;
+class PersonalAccessTokenCredentialHandler {
+    constructor(token) {
+        this.token = token;
+    }
+    // currently implements pre-authorization
+    // TODO: support preAuth = false where it hooks on 401
+    prepareRequest(options) {
+        if (!options.headers) {
+            throw Error('The request has no headers');
+        }
+        options.headers['Authorization'] = `Basic ${Buffer.from(`PAT:${this.token}`).toString('base64')}`;
+    }
+    // This handler cannot handle 401
+    canHandleAuthentication() {
+        return false;
+    }
+    handleAuthentication() {
+        return __awaiter(this, void 0, void 0, function* () {
+            throw new Error('not implemented');
+        });
+    }
+}
+exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
+//# sourceMappingURL=auth.js.map
 
-    return !!(obj.constructor && obj.constructor.isBuffer && obj.constructor.isBuffer(obj));
+/***/ }),
+
+/***/ 255:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
 };
-
-var combine = function combine(a, b) {
-    return [].concat(a, b);
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
 };
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HttpClient = exports.isHttps = exports.HttpClientResponse = exports.HttpClientError = exports.getProxyUrl = exports.MediaTypes = exports.Headers = exports.HttpCodes = void 0;
+const http = __importStar(__nccwpck_require__(685));
+const https = __importStar(__nccwpck_require__(687));
+const pm = __importStar(__nccwpck_require__(835));
+const tunnel = __importStar(__nccwpck_require__(294));
+var HttpCodes;
+(function (HttpCodes) {
+    HttpCodes[HttpCodes["OK"] = 200] = "OK";
+    HttpCodes[HttpCodes["MultipleChoices"] = 300] = "MultipleChoices";
+    HttpCodes[HttpCodes["MovedPermanently"] = 301] = "MovedPermanently";
+    HttpCodes[HttpCodes["ResourceMoved"] = 302] = "ResourceMoved";
+    HttpCodes[HttpCodes["SeeOther"] = 303] = "SeeOther";
+    HttpCodes[HttpCodes["NotModified"] = 304] = "NotModified";
+    HttpCodes[HttpCodes["UseProxy"] = 305] = "UseProxy";
+    HttpCodes[HttpCodes["SwitchProxy"] = 306] = "SwitchProxy";
+    HttpCodes[HttpCodes["TemporaryRedirect"] = 307] = "TemporaryRedirect";
+    HttpCodes[HttpCodes["PermanentRedirect"] = 308] = "PermanentRedirect";
+    HttpCodes[HttpCodes["BadRequest"] = 400] = "BadRequest";
+    HttpCodes[HttpCodes["Unauthorized"] = 401] = "Unauthorized";
+    HttpCodes[HttpCodes["PaymentRequired"] = 402] = "PaymentRequired";
+    HttpCodes[HttpCodes["Forbidden"] = 403] = "Forbidden";
+    HttpCodes[HttpCodes["NotFound"] = 404] = "NotFound";
+    HttpCodes[HttpCodes["MethodNotAllowed"] = 405] = "MethodNotAllowed";
+    HttpCodes[HttpCodes["NotAcceptable"] = 406] = "NotAcceptable";
+    HttpCodes[HttpCodes["ProxyAuthenticationRequired"] = 407] = "ProxyAuthenticationRequired";
+    HttpCodes[HttpCodes["RequestTimeout"] = 408] = "RequestTimeout";
+    HttpCodes[HttpCodes["Conflict"] = 409] = "Conflict";
+    HttpCodes[HttpCodes["Gone"] = 410] = "Gone";
+    HttpCodes[HttpCodes["TooManyRequests"] = 429] = "TooManyRequests";
+    HttpCodes[HttpCodes["InternalServerError"] = 500] = "InternalServerError";
+    HttpCodes[HttpCodes["NotImplemented"] = 501] = "NotImplemented";
+    HttpCodes[HttpCodes["BadGateway"] = 502] = "BadGateway";
+    HttpCodes[HttpCodes["ServiceUnavailable"] = 503] = "ServiceUnavailable";
+    HttpCodes[HttpCodes["GatewayTimeout"] = 504] = "GatewayTimeout";
+})(HttpCodes = exports.HttpCodes || (exports.HttpCodes = {}));
+var Headers;
+(function (Headers) {
+    Headers["Accept"] = "accept";
+    Headers["ContentType"] = "content-type";
+})(Headers = exports.Headers || (exports.Headers = {}));
+var MediaTypes;
+(function (MediaTypes) {
+    MediaTypes["ApplicationJson"] = "application/json";
+})(MediaTypes = exports.MediaTypes || (exports.MediaTypes = {}));
+/**
+ * Returns the proxy URL, depending upon the supplied url and proxy environment variables.
+ * @param serverUrl  The server URL where the request will be sent. For example, https://api.github.com
+ */
+function getProxyUrl(serverUrl) {
+    const proxyUrl = pm.getProxyUrl(new URL(serverUrl));
+    return proxyUrl ? proxyUrl.href : '';
+}
+exports.getProxyUrl = getProxyUrl;
+const HttpRedirectCodes = [
+    HttpCodes.MovedPermanently,
+    HttpCodes.ResourceMoved,
+    HttpCodes.SeeOther,
+    HttpCodes.TemporaryRedirect,
+    HttpCodes.PermanentRedirect
+];
+const HttpResponseRetryCodes = [
+    HttpCodes.BadGateway,
+    HttpCodes.ServiceUnavailable,
+    HttpCodes.GatewayTimeout
+];
+const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
+const ExponentialBackoffCeiling = 10;
+const ExponentialBackoffTimeSlice = 5;
+class HttpClientError extends Error {
+    constructor(message, statusCode) {
+        super(message);
+        this.name = 'HttpClientError';
+        this.statusCode = statusCode;
+        Object.setPrototypeOf(this, HttpClientError.prototype);
+    }
+}
+exports.HttpClientError = HttpClientError;
+class HttpClientResponse {
+    constructor(message) {
+        this.message = message;
+    }
+    readBody() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+                let output = Buffer.alloc(0);
+                this.message.on('data', (chunk) => {
+                    output = Buffer.concat([output, chunk]);
+                });
+                this.message.on('end', () => {
+                    resolve(output.toString());
+                });
+            }));
+        });
+    }
+}
+exports.HttpClientResponse = HttpClientResponse;
+function isHttps(requestUrl) {
+    const parsedUrl = new URL(requestUrl);
+    return parsedUrl.protocol === 'https:';
+}
+exports.isHttps = isHttps;
+class HttpClient {
+    constructor(userAgent, handlers, requestOptions) {
+        this._ignoreSslError = false;
+        this._allowRedirects = true;
+        this._allowRedirectDowngrade = false;
+        this._maxRedirects = 50;
+        this._allowRetries = false;
+        this._maxRetries = 1;
+        this._keepAlive = false;
+        this._disposed = false;
+        this.userAgent = userAgent;
+        this.handlers = handlers || [];
+        this.requestOptions = requestOptions;
+        if (requestOptions) {
+            if (requestOptions.ignoreSslError != null) {
+                this._ignoreSslError = requestOptions.ignoreSslError;
+            }
+            this._socketTimeout = requestOptions.socketTimeout;
+            if (requestOptions.allowRedirects != null) {
+                this._allowRedirects = requestOptions.allowRedirects;
+            }
+            if (requestOptions.allowRedirectDowngrade != null) {
+                this._allowRedirectDowngrade = requestOptions.allowRedirectDowngrade;
+            }
+            if (requestOptions.maxRedirects != null) {
+                this._maxRedirects = Math.max(requestOptions.maxRedirects, 0);
+            }
+            if (requestOptions.keepAlive != null) {
+                this._keepAlive = requestOptions.keepAlive;
+            }
+            if (requestOptions.allowRetries != null) {
+                this._allowRetries = requestOptions.allowRetries;
+            }
+            if (requestOptions.maxRetries != null) {
+                this._maxRetries = requestOptions.maxRetries;
+            }
+        }
+    }
+    options(requestUrl, additionalHeaders) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request('OPTIONS', requestUrl, null, additionalHeaders || {});
+        });
+    }
+    get(requestUrl, additionalHeaders) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request('GET', requestUrl, null, additionalHeaders || {});
+        });
+    }
+    del(requestUrl, additionalHeaders) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request('DELETE', requestUrl, null, additionalHeaders || {});
+        });
+    }
+    post(requestUrl, data, additionalHeaders) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request('POST', requestUrl, data, additionalHeaders || {});
+        });
+    }
+    patch(requestUrl, data, additionalHeaders) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request('PATCH', requestUrl, data, additionalHeaders || {});
+        });
+    }
+    put(requestUrl, data, additionalHeaders) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request('PUT', requestUrl, data, additionalHeaders || {});
+        });
+    }
+    head(requestUrl, additionalHeaders) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request('HEAD', requestUrl, null, additionalHeaders || {});
+        });
+    }
+    sendStream(verb, requestUrl, stream, additionalHeaders) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.request(verb, requestUrl, stream, additionalHeaders);
+        });
+    }
+    /**
+     * Gets a typed object from an endpoint
+     * Be aware that not found returns a null.  Other errors (4xx, 5xx) reject the promise
+     */
+    getJson(requestUrl, additionalHeaders = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+            const res = yield this.get(requestUrl, additionalHeaders);
+            return this._processResponse(res, this.requestOptions);
+        });
+    }
+    postJson(requestUrl, obj, additionalHeaders = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = JSON.stringify(obj, null, 2);
+            additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+            additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+            const res = yield this.post(requestUrl, data, additionalHeaders);
+            return this._processResponse(res, this.requestOptions);
+        });
+    }
+    putJson(requestUrl, obj, additionalHeaders = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = JSON.stringify(obj, null, 2);
+            additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+            additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+            const res = yield this.put(requestUrl, data, additionalHeaders);
+            return this._processResponse(res, this.requestOptions);
+        });
+    }
+    patchJson(requestUrl, obj, additionalHeaders = {}) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = JSON.stringify(obj, null, 2);
+            additionalHeaders[Headers.Accept] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.Accept, MediaTypes.ApplicationJson);
+            additionalHeaders[Headers.ContentType] = this._getExistingOrDefaultHeader(additionalHeaders, Headers.ContentType, MediaTypes.ApplicationJson);
+            const res = yield this.patch(requestUrl, data, additionalHeaders);
+            return this._processResponse(res, this.requestOptions);
+        });
+    }
+    /**
+     * Makes a raw http request.
+     * All other methods such as get, post, patch, and request ultimately call this.
+     * Prefer get, del, post and patch
+     */
+    request(verb, requestUrl, data, headers) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._disposed) {
+                throw new Error('Client has already been disposed.');
+            }
+            const parsedUrl = new URL(requestUrl);
+            let info = this._prepareRequest(verb, parsedUrl, headers);
+            // Only perform retries on reads since writes may not be idempotent.
+            const maxTries = this._allowRetries && RetryableHttpVerbs.includes(verb)
+                ? this._maxRetries + 1
+                : 1;
+            let numTries = 0;
+            let response;
+            do {
+                response = yield this.requestRaw(info, data);
+                // Check if it's an authentication challenge
+                if (response &&
+                    response.message &&
+                    response.message.statusCode === HttpCodes.Unauthorized) {
+                    let authenticationHandler;
+                    for (const handler of this.handlers) {
+                        if (handler.canHandleAuthentication(response)) {
+                            authenticationHandler = handler;
+                            break;
+                        }
+                    }
+                    if (authenticationHandler) {
+                        return authenticationHandler.handleAuthentication(this, info, data);
+                    }
+                    else {
+                        // We have received an unauthorized response but have no handlers to handle it.
+                        // Let the response return to the caller.
+                        return response;
+                    }
+                }
+                let redirectsRemaining = this._maxRedirects;
+                while (response.message.statusCode &&
+                    HttpRedirectCodes.includes(response.message.statusCode) &&
+                    this._allowRedirects &&
+                    redirectsRemaining > 0) {
+                    const redirectUrl = response.message.headers['location'];
+                    if (!redirectUrl) {
+                        // if there's no location to redirect to, we won't
+                        break;
+                    }
+                    const parsedRedirectUrl = new URL(redirectUrl);
+                    if (parsedUrl.protocol === 'https:' &&
+                        parsedUrl.protocol !== parsedRedirectUrl.protocol &&
+                        !this._allowRedirectDowngrade) {
+                        throw new Error('Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.');
+                    }
+                    // we need to finish reading the response before reassigning response
+                    // which will leak the open socket.
+                    yield response.readBody();
+                    // strip authorization header if redirected to a different hostname
+                    if (parsedRedirectUrl.hostname !== parsedUrl.hostname) {
+                        for (const header in headers) {
+                            // header names are case insensitive
+                            if (header.toLowerCase() === 'authorization') {
+                                delete headers[header];
+                            }
+                        }
+                    }
+                    // let's make the request with the new redirectUrl
+                    info = this._prepareRequest(verb, parsedRedirectUrl, headers);
+                    response = yield this.requestRaw(info, data);
+                    redirectsRemaining--;
+                }
+                if (!response.message.statusCode ||
+                    !HttpResponseRetryCodes.includes(response.message.statusCode)) {
+                    // If not a retry code, return immediately instead of retrying
+                    return response;
+                }
+                numTries += 1;
+                if (numTries < maxTries) {
+                    yield response.readBody();
+                    yield this._performExponentialBackoff(numTries);
+                }
+            } while (numTries < maxTries);
+            return response;
+        });
+    }
+    /**
+     * Needs to be called if keepAlive is set to true in request options.
+     */
+    dispose() {
+        if (this._agent) {
+            this._agent.destroy();
+        }
+        this._disposed = true;
+    }
+    /**
+     * Raw request.
+     * @param info
+     * @param data
+     */
+    requestRaw(info, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve, reject) => {
+                function callbackForResult(err, res) {
+                    if (err) {
+                        reject(err);
+                    }
+                    else if (!res) {
+                        // If `err` is not passed, then `res` must be passed.
+                        reject(new Error('Unknown error'));
+                    }
+                    else {
+                        resolve(res);
+                    }
+                }
+                this.requestRawWithCallback(info, data, callbackForResult);
+            });
+        });
+    }
+    /**
+     * Raw request with callback.
+     * @param info
+     * @param data
+     * @param onResult
+     */
+    requestRawWithCallback(info, data, onResult) {
+        if (typeof data === 'string') {
+            if (!info.options.headers) {
+                info.options.headers = {};
+            }
+            info.options.headers['Content-Length'] = Buffer.byteLength(data, 'utf8');
+        }
+        let callbackCalled = false;
+        function handleResult(err, res) {
+            if (!callbackCalled) {
+                callbackCalled = true;
+                onResult(err, res);
+            }
+        }
+        const req = info.httpModule.request(info.options, (msg) => {
+            const res = new HttpClientResponse(msg);
+            handleResult(undefined, res);
+        });
+        let socket;
+        req.on('socket', sock => {
+            socket = sock;
+        });
+        // If we ever get disconnected, we want the socket to timeout eventually
+        req.setTimeout(this._socketTimeout || 3 * 60000, () => {
+            if (socket) {
+                socket.end();
+            }
+            handleResult(new Error(`Request timeout: ${info.options.path}`));
+        });
+        req.on('error', function (err) {
+            // err has statusCode property
+            // res should have headers
+            handleResult(err);
+        });
+        if (data && typeof data === 'string') {
+            req.write(data, 'utf8');
+        }
+        if (data && typeof data !== 'string') {
+            data.on('close', function () {
+                req.end();
+            });
+            data.pipe(req);
+        }
+        else {
+            req.end();
+        }
+    }
+    /**
+     * Gets an http agent. This function is useful when you need an http agent that handles
+     * routing through a proxy server - depending upon the url and proxy environment variables.
+     * @param serverUrl  The server URL where the request will be sent. For example, https://api.github.com
+     */
+    getAgent(serverUrl) {
+        const parsedUrl = new URL(serverUrl);
+        return this._getAgent(parsedUrl);
+    }
+    _prepareRequest(method, requestUrl, headers) {
+        const info = {};
+        info.parsedUrl = requestUrl;
+        const usingSsl = info.parsedUrl.protocol === 'https:';
+        info.httpModule = usingSsl ? https : http;
+        const defaultPort = usingSsl ? 443 : 80;
+        info.options = {};
+        info.options.host = info.parsedUrl.hostname;
+        info.options.port = info.parsedUrl.port
+            ? parseInt(info.parsedUrl.port)
+            : defaultPort;
+        info.options.path =
+            (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
+        info.options.method = method;
+        info.options.headers = this._mergeHeaders(headers);
+        if (this.userAgent != null) {
+            info.options.headers['user-agent'] = this.userAgent;
+        }
+        info.options.agent = this._getAgent(info.parsedUrl);
+        // gives handlers an opportunity to participate
+        if (this.handlers) {
+            for (const handler of this.handlers) {
+                handler.prepareRequest(info.options);
+            }
+        }
+        return info;
+    }
+    _mergeHeaders(headers) {
+        if (this.requestOptions && this.requestOptions.headers) {
+            return Object.assign({}, lowercaseKeys(this.requestOptions.headers), lowercaseKeys(headers || {}));
+        }
+        return lowercaseKeys(headers || {});
+    }
+    _getExistingOrDefaultHeader(additionalHeaders, header, _default) {
+        let clientHeader;
+        if (this.requestOptions && this.requestOptions.headers) {
+            clientHeader = lowercaseKeys(this.requestOptions.headers)[header];
+        }
+        return additionalHeaders[header] || clientHeader || _default;
+    }
+    _getAgent(parsedUrl) {
+        let agent;
+        const proxyUrl = pm.getProxyUrl(parsedUrl);
+        const useProxy = proxyUrl && proxyUrl.hostname;
+        if (this._keepAlive && useProxy) {
+            agent = this._proxyAgent;
+        }
+        if (this._keepAlive && !useProxy) {
+            agent = this._agent;
+        }
+        // if agent is already assigned use that agent.
+        if (agent) {
+            return agent;
+        }
+        const usingSsl = parsedUrl.protocol === 'https:';
+        let maxSockets = 100;
+        if (this.requestOptions) {
+            maxSockets = this.requestOptions.maxSockets || http.globalAgent.maxSockets;
+        }
+        // This is `useProxy` again, but we need to check `proxyURl` directly for TypeScripts's flow analysis.
+        if (proxyUrl && proxyUrl.hostname) {
+            const agentOptions = {
+                maxSockets,
+                keepAlive: this._keepAlive,
+                proxy: Object.assign(Object.assign({}, ((proxyUrl.username || proxyUrl.password) && {
+                    proxyAuth: `${proxyUrl.username}:${proxyUrl.password}`
+                })), { host: proxyUrl.hostname, port: proxyUrl.port })
+            };
+            let tunnelAgent;
+            const overHttps = proxyUrl.protocol === 'https:';
+            if (usingSsl) {
+                tunnelAgent = overHttps ? tunnel.httpsOverHttps : tunnel.httpsOverHttp;
+            }
+            else {
+                tunnelAgent = overHttps ? tunnel.httpOverHttps : tunnel.httpOverHttp;
+            }
+            agent = tunnelAgent(agentOptions);
+            this._proxyAgent = agent;
+        }
+        // if reusing agent across request and tunneling agent isn't assigned create a new agent
+        if (this._keepAlive && !agent) {
+            const options = { keepAlive: this._keepAlive, maxSockets };
+            agent = usingSsl ? new https.Agent(options) : new http.Agent(options);
+            this._agent = agent;
+        }
+        // if not using private agent and tunnel agent isn't setup then use global agent
+        if (!agent) {
+            agent = usingSsl ? https.globalAgent : http.globalAgent;
+        }
+        if (usingSsl && this._ignoreSslError) {
+            // we don't want to set NODE_TLS_REJECT_UNAUTHORIZED=0 since that will affect request for entire process
+            // http.RequestOptions doesn't expose a way to modify RequestOptions.agent.options
+            // we have to cast it to any and change it directly
+            agent.options = Object.assign(agent.options || {}, {
+                rejectUnauthorized: false
+            });
+        }
+        return agent;
+    }
+    _performExponentialBackoff(retryNumber) {
+        return __awaiter(this, void 0, void 0, function* () {
+            retryNumber = Math.min(ExponentialBackoffCeiling, retryNumber);
+            const ms = ExponentialBackoffTimeSlice * Math.pow(2, retryNumber);
+            return new Promise(resolve => setTimeout(() => resolve(), ms));
+        });
+    }
+    _processResponse(res, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
+                const statusCode = res.message.statusCode || 0;
+                const response = {
+                    statusCode,
+                    result: null,
+                    headers: {}
+                };
+                // not found leads to null obj returned
+                if (statusCode === HttpCodes.NotFound) {
+                    resolve(response);
+                }
+                // get the result from the body
+                function dateTimeDeserializer(key, value) {
+                    if (typeof value === 'string') {
+                        const a = new Date(value);
+                        if (!isNaN(a.valueOf())) {
+                            return a;
+                        }
+                    }
+                    return value;
+                }
+                let obj;
+                let contents;
+                try {
+                    contents = yield res.readBody();
+                    if (contents && contents.length > 0) {
+                        if (options && options.deserializeDates) {
+                            obj = JSON.parse(contents, dateTimeDeserializer);
+                        }
+                        else {
+                            obj = JSON.parse(contents);
+                        }
+                        response.result = obj;
+                    }
+                    response.headers = res.message.headers;
+                }
+                catch (err) {
+                    // Invalid resource (contents not json);  leaving result obj null
+                }
+                // note that 3xx redirects are handled by the http layer.
+                if (statusCode > 299) {
+                    let msg;
+                    // if exception/error in body, attempt to get better error
+                    if (obj && obj.message) {
+                        msg = obj.message;
+                    }
+                    else if (contents && contents.length > 0) {
+                        // it may be the case that the exception is in the body message as string
+                        msg = contents;
+                    }
+                    else {
+                        msg = `Failed request: (${statusCode})`;
+                    }
+                    const err = new HttpClientError(msg, statusCode);
+                    err.result = response.result;
+                    reject(err);
+                }
+                else {
+                    resolve(response);
+                }
+            }));
+        });
+    }
+}
+exports.HttpClient = HttpClient;
+const lowercaseKeys = (obj) => Object.keys(obj).reduce((c, k) => ((c[k.toLowerCase()] = obj[k]), c), {});
+//# sourceMappingURL=index.js.map
 
-module.exports = {
-    arrayToObject: arrayToObject,
-    assign: assign,
-    combine: combine,
-    compact: compact,
-    decode: decode,
-    encode: encode,
-    isBuffer: isBuffer,
-    isRegExp: isRegExp,
-    merge: merge
-};
+/***/ }),
 
+/***/ 835:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.checkBypass = exports.getProxyUrl = void 0;
+function getProxyUrl(reqUrl) {
+    const usingSsl = reqUrl.protocol === 'https:';
+    if (checkBypass(reqUrl)) {
+        return undefined;
+    }
+    const proxyVar = (() => {
+        if (usingSsl) {
+            return process.env['https_proxy'] || process.env['HTTPS_PROXY'];
+        }
+        else {
+            return process.env['http_proxy'] || process.env['HTTP_PROXY'];
+        }
+    })();
+    if (proxyVar) {
+        return new URL(proxyVar);
+    }
+    else {
+        return undefined;
+    }
+}
+exports.getProxyUrl = getProxyUrl;
+function checkBypass(reqUrl) {
+    if (!reqUrl.hostname) {
+        return false;
+    }
+    const noProxy = process.env['no_proxy'] || process.env['NO_PROXY'] || '';
+    if (!noProxy) {
+        return false;
+    }
+    // Determine the request port
+    let reqPort;
+    if (reqUrl.port) {
+        reqPort = Number(reqUrl.port);
+    }
+    else if (reqUrl.protocol === 'http:') {
+        reqPort = 80;
+    }
+    else if (reqUrl.protocol === 'https:') {
+        reqPort = 443;
+    }
+    // Format the request hostname and hostname with port
+    const upperReqHosts = [reqUrl.hostname.toUpperCase()];
+    if (typeof reqPort === 'number') {
+        upperReqHosts.push(`${upperReqHosts[0]}:${reqPort}`);
+    }
+    // Compare request host against noproxy
+    for (const upperNoProxyItem of noProxy
+        .split(',')
+        .map(x => x.trim().toUpperCase())
+        .filter(x => x)) {
+        if (upperReqHosts.some(x => x === upperNoProxyItem)) {
+            return true;
+        }
+    }
+    return false;
+}
+exports.checkBypass = checkBypass;
+//# sourceMappingURL=proxy.js.map
 
 /***/ }),
 
@@ -1784,889 +2086,6 @@ exports.debug = debug; // for test
 
 /***/ }),
 
-/***/ 538:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const url = __nccwpck_require__(310);
-const http = __nccwpck_require__(685);
-const https = __nccwpck_require__(687);
-const util = __nccwpck_require__(470);
-let fs;
-let tunnel;
-var HttpCodes;
-(function (HttpCodes) {
-    HttpCodes[HttpCodes["OK"] = 200] = "OK";
-    HttpCodes[HttpCodes["MultipleChoices"] = 300] = "MultipleChoices";
-    HttpCodes[HttpCodes["MovedPermanently"] = 301] = "MovedPermanently";
-    HttpCodes[HttpCodes["ResourceMoved"] = 302] = "ResourceMoved";
-    HttpCodes[HttpCodes["SeeOther"] = 303] = "SeeOther";
-    HttpCodes[HttpCodes["NotModified"] = 304] = "NotModified";
-    HttpCodes[HttpCodes["UseProxy"] = 305] = "UseProxy";
-    HttpCodes[HttpCodes["SwitchProxy"] = 306] = "SwitchProxy";
-    HttpCodes[HttpCodes["TemporaryRedirect"] = 307] = "TemporaryRedirect";
-    HttpCodes[HttpCodes["PermanentRedirect"] = 308] = "PermanentRedirect";
-    HttpCodes[HttpCodes["BadRequest"] = 400] = "BadRequest";
-    HttpCodes[HttpCodes["Unauthorized"] = 401] = "Unauthorized";
-    HttpCodes[HttpCodes["PaymentRequired"] = 402] = "PaymentRequired";
-    HttpCodes[HttpCodes["Forbidden"] = 403] = "Forbidden";
-    HttpCodes[HttpCodes["NotFound"] = 404] = "NotFound";
-    HttpCodes[HttpCodes["MethodNotAllowed"] = 405] = "MethodNotAllowed";
-    HttpCodes[HttpCodes["NotAcceptable"] = 406] = "NotAcceptable";
-    HttpCodes[HttpCodes["ProxyAuthenticationRequired"] = 407] = "ProxyAuthenticationRequired";
-    HttpCodes[HttpCodes["RequestTimeout"] = 408] = "RequestTimeout";
-    HttpCodes[HttpCodes["Conflict"] = 409] = "Conflict";
-    HttpCodes[HttpCodes["Gone"] = 410] = "Gone";
-    HttpCodes[HttpCodes["TooManyRequests"] = 429] = "TooManyRequests";
-    HttpCodes[HttpCodes["InternalServerError"] = 500] = "InternalServerError";
-    HttpCodes[HttpCodes["NotImplemented"] = 501] = "NotImplemented";
-    HttpCodes[HttpCodes["BadGateway"] = 502] = "BadGateway";
-    HttpCodes[HttpCodes["ServiceUnavailable"] = 503] = "ServiceUnavailable";
-    HttpCodes[HttpCodes["GatewayTimeout"] = 504] = "GatewayTimeout";
-})(HttpCodes = exports.HttpCodes || (exports.HttpCodes = {}));
-const HttpRedirectCodes = [HttpCodes.MovedPermanently, HttpCodes.ResourceMoved, HttpCodes.SeeOther, HttpCodes.TemporaryRedirect, HttpCodes.PermanentRedirect];
-const HttpResponseRetryCodes = [HttpCodes.BadGateway, HttpCodes.ServiceUnavailable, HttpCodes.GatewayTimeout];
-const NetworkRetryErrors = ['ECONNRESET', 'ENOTFOUND', 'ESOCKETTIMEDOUT', 'ETIMEDOUT', 'ECONNREFUSED'];
-const RetryableHttpVerbs = ['OPTIONS', 'GET', 'DELETE', 'HEAD'];
-const ExponentialBackoffCeiling = 10;
-const ExponentialBackoffTimeSlice = 5;
-class HttpClientResponse {
-    constructor(message) {
-        this.message = message;
-    }
-    readBody() {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            let buffer = Buffer.alloc(0);
-            const encodingCharset = util.obtainContentCharset(this);
-            // Extract Encoding from header: 'content-encoding'
-            // Match `gzip`, `gzip, deflate` variations of GZIP encoding
-            const contentEncoding = this.message.headers['content-encoding'] || '';
-            const isGzippedEncoded = new RegExp('(gzip$)|(gzip, *deflate)').test(contentEncoding);
-            this.message.on('data', function (data) {
-                const chunk = (typeof data === 'string') ? Buffer.from(data, encodingCharset) : data;
-                buffer = Buffer.concat([buffer, chunk]);
-            }).on('end', function () {
-                return __awaiter(this, void 0, void 0, function* () {
-                    if (isGzippedEncoded) { // Process GZipped Response Body HERE
-                        const gunzippedBody = yield util.decompressGzippedContent(buffer, encodingCharset);
-                        resolve(gunzippedBody);
-                    }
-                    else {
-                        resolve(buffer.toString(encodingCharset));
-                    }
-                });
-            }).on('error', function (err) {
-                reject(err);
-            });
-        }));
-    }
-}
-exports.HttpClientResponse = HttpClientResponse;
-function isHttps(requestUrl) {
-    let parsedUrl = url.parse(requestUrl);
-    return parsedUrl.protocol === 'https:';
-}
-exports.isHttps = isHttps;
-var EnvironmentVariables;
-(function (EnvironmentVariables) {
-    EnvironmentVariables["HTTP_PROXY"] = "HTTP_PROXY";
-    EnvironmentVariables["HTTPS_PROXY"] = "HTTPS_PROXY";
-    EnvironmentVariables["NO_PROXY"] = "NO_PROXY";
-})(EnvironmentVariables || (EnvironmentVariables = {}));
-class HttpClient {
-    constructor(userAgent, handlers, requestOptions) {
-        this._ignoreSslError = false;
-        this._allowRedirects = true;
-        this._allowRedirectDowngrade = false;
-        this._maxRedirects = 50;
-        this._allowRetries = false;
-        this._maxRetries = 1;
-        this._keepAlive = false;
-        this._disposed = false;
-        this.userAgent = userAgent;
-        this.handlers = handlers || [];
-        let no_proxy = process.env[EnvironmentVariables.NO_PROXY];
-        if (no_proxy) {
-            this._httpProxyBypassHosts = [];
-            no_proxy.split(',').forEach(bypass => {
-                this._httpProxyBypassHosts.push(util.buildProxyBypassRegexFromEnv(bypass));
-            });
-        }
-        this.requestOptions = requestOptions;
-        if (requestOptions) {
-            if (requestOptions.ignoreSslError != null) {
-                this._ignoreSslError = requestOptions.ignoreSslError;
-            }
-            this._socketTimeout = requestOptions.socketTimeout;
-            this._httpProxy = requestOptions.proxy;
-            if (requestOptions.proxy && requestOptions.proxy.proxyBypassHosts) {
-                this._httpProxyBypassHosts = [];
-                requestOptions.proxy.proxyBypassHosts.forEach(bypass => {
-                    this._httpProxyBypassHosts.push(new RegExp(bypass, 'i'));
-                });
-            }
-            this._certConfig = requestOptions.cert;
-            if (this._certConfig) {
-                // If using cert, need fs
-                fs = __nccwpck_require__(147);
-                // cache the cert content into memory, so we don't have to read it from disk every time
-                if (this._certConfig.caFile && fs.existsSync(this._certConfig.caFile)) {
-                    this._ca = fs.readFileSync(this._certConfig.caFile, 'utf8');
-                }
-                if (this._certConfig.certFile && fs.existsSync(this._certConfig.certFile)) {
-                    this._cert = fs.readFileSync(this._certConfig.certFile, 'utf8');
-                }
-                if (this._certConfig.keyFile && fs.existsSync(this._certConfig.keyFile)) {
-                    this._key = fs.readFileSync(this._certConfig.keyFile, 'utf8');
-                }
-            }
-            if (requestOptions.allowRedirects != null) {
-                this._allowRedirects = requestOptions.allowRedirects;
-            }
-            if (requestOptions.allowRedirectDowngrade != null) {
-                this._allowRedirectDowngrade = requestOptions.allowRedirectDowngrade;
-            }
-            if (requestOptions.maxRedirects != null) {
-                this._maxRedirects = Math.max(requestOptions.maxRedirects, 0);
-            }
-            if (requestOptions.keepAlive != null) {
-                this._keepAlive = requestOptions.keepAlive;
-            }
-            if (requestOptions.allowRetries != null) {
-                this._allowRetries = requestOptions.allowRetries;
-            }
-            if (requestOptions.maxRetries != null) {
-                this._maxRetries = requestOptions.maxRetries;
-            }
-        }
-    }
-    options(requestUrl, additionalHeaders) {
-        return this.request('OPTIONS', requestUrl, null, additionalHeaders || {});
-    }
-    get(requestUrl, additionalHeaders) {
-        return this.request('GET', requestUrl, null, additionalHeaders || {});
-    }
-    del(requestUrl, additionalHeaders) {
-        return this.request('DELETE', requestUrl, null, additionalHeaders || {});
-    }
-    post(requestUrl, data, additionalHeaders) {
-        return this.request('POST', requestUrl, data, additionalHeaders || {});
-    }
-    patch(requestUrl, data, additionalHeaders) {
-        return this.request('PATCH', requestUrl, data, additionalHeaders || {});
-    }
-    put(requestUrl, data, additionalHeaders) {
-        return this.request('PUT', requestUrl, data, additionalHeaders || {});
-    }
-    head(requestUrl, additionalHeaders) {
-        return this.request('HEAD', requestUrl, null, additionalHeaders || {});
-    }
-    sendStream(verb, requestUrl, stream, additionalHeaders) {
-        return this.request(verb, requestUrl, stream, additionalHeaders);
-    }
-    /**
-     * Makes a raw http request.
-     * All other methods such as get, post, patch, and request ultimately call this.
-     * Prefer get, del, post and patch
-     */
-    request(verb, requestUrl, data, headers) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this._disposed) {
-                throw new Error("Client has already been disposed.");
-            }
-            let parsedUrl = url.parse(requestUrl);
-            let info = this._prepareRequest(verb, parsedUrl, headers);
-            // Only perform retries on reads since writes may not be idempotent.
-            let maxTries = (this._allowRetries && RetryableHttpVerbs.indexOf(verb) != -1) ? this._maxRetries + 1 : 1;
-            let numTries = 0;
-            let response;
-            while (numTries < maxTries) {
-                try {
-                    response = yield this.requestRaw(info, data);
-                }
-                catch (err) {
-                    numTries++;
-                    if (err && err.code && NetworkRetryErrors.indexOf(err.code) > -1 && numTries < maxTries) {
-                        yield this._performExponentialBackoff(numTries);
-                        continue;
-                    }
-                    throw err;
-                }
-                // Check if it's an authentication challenge
-                if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
-                    let authenticationHandler;
-                    for (let i = 0; i < this.handlers.length; i++) {
-                        if (this.handlers[i].canHandleAuthentication(response)) {
-                            authenticationHandler = this.handlers[i];
-                            break;
-                        }
-                    }
-                    if (authenticationHandler) {
-                        return authenticationHandler.handleAuthentication(this, info, data);
-                    }
-                    else {
-                        // We have received an unauthorized response but have no handlers to handle it.
-                        // Let the response return to the caller.
-                        return response;
-                    }
-                }
-                let redirectsRemaining = this._maxRedirects;
-                while (HttpRedirectCodes.indexOf(response.message.statusCode) != -1
-                    && this._allowRedirects
-                    && redirectsRemaining > 0) {
-                    const redirectUrl = response.message.headers["location"];
-                    if (!redirectUrl) {
-                        // if there's no location to redirect to, we won't
-                        break;
-                    }
-                    let parsedRedirectUrl = url.parse(redirectUrl);
-                    if (parsedUrl.protocol == 'https:' && parsedUrl.protocol != parsedRedirectUrl.protocol && !this._allowRedirectDowngrade) {
-                        throw new Error("Redirect from HTTPS to HTTP protocol. This downgrade is not allowed for security reasons. If you want to allow this behavior, set the allowRedirectDowngrade option to true.");
-                    }
-                    // we need to finish reading the response before reassigning response
-                    // which will leak the open socket.
-                    yield response.readBody();
-                    // let's make the request with the new redirectUrl
-                    info = this._prepareRequest(verb, parsedRedirectUrl, headers);
-                    response = yield this.requestRaw(info, data);
-                    redirectsRemaining--;
-                }
-                if (HttpResponseRetryCodes.indexOf(response.message.statusCode) == -1) {
-                    // If not a retry code, return immediately instead of retrying
-                    return response;
-                }
-                numTries += 1;
-                if (numTries < maxTries) {
-                    yield response.readBody();
-                    yield this._performExponentialBackoff(numTries);
-                }
-            }
-            return response;
-        });
-    }
-    /**
-     * Needs to be called if keepAlive is set to true in request options.
-     */
-    dispose() {
-        if (this._agent) {
-            this._agent.destroy();
-        }
-        this._disposed = true;
-    }
-    /**
-     * Raw request.
-     * @param info
-     * @param data
-     */
-    requestRaw(info, data) {
-        return new Promise((resolve, reject) => {
-            let callbackForResult = function (err, res) {
-                if (err) {
-                    reject(err);
-                }
-                resolve(res);
-            };
-            this.requestRawWithCallback(info, data, callbackForResult);
-        });
-    }
-    /**
-     * Raw request with callback.
-     * @param info
-     * @param data
-     * @param onResult
-     */
-    requestRawWithCallback(info, data, onResult) {
-        let socket;
-        if (typeof (data) === 'string') {
-            info.options.headers["Content-Length"] = Buffer.byteLength(data, 'utf8');
-        }
-        let callbackCalled = false;
-        let handleResult = (err, res) => {
-            if (!callbackCalled) {
-                callbackCalled = true;
-                onResult(err, res);
-            }
-        };
-        let req = info.httpModule.request(info.options, (msg) => {
-            let res = new HttpClientResponse(msg);
-            handleResult(null, res);
-        });
-        req.on('socket', (sock) => {
-            socket = sock;
-        });
-        // If we ever get disconnected, we want the socket to timeout eventually
-        req.setTimeout(this._socketTimeout || 3 * 60000, () => {
-            if (socket) {
-                socket.destroy();
-            }
-            handleResult(new Error('Request timeout: ' + info.options.path), null);
-        });
-        req.on('error', function (err) {
-            // err has statusCode property
-            // res should have headers
-            handleResult(err, null);
-        });
-        if (data && typeof (data) === 'string') {
-            req.write(data, 'utf8');
-        }
-        if (data && typeof (data) !== 'string') {
-            data.on('close', function () {
-                req.end();
-            });
-            data.pipe(req);
-        }
-        else {
-            req.end();
-        }
-    }
-    _prepareRequest(method, requestUrl, headers) {
-        const info = {};
-        info.parsedUrl = requestUrl;
-        const usingSsl = info.parsedUrl.protocol === 'https:';
-        info.httpModule = usingSsl ? https : http;
-        const defaultPort = usingSsl ? 443 : 80;
-        info.options = {};
-        info.options.host = info.parsedUrl.hostname;
-        info.options.port = info.parsedUrl.port ? parseInt(info.parsedUrl.port) : defaultPort;
-        info.options.path = (info.parsedUrl.pathname || '') + (info.parsedUrl.search || '');
-        info.options.method = method;
-        info.options.timeout = (this.requestOptions && this.requestOptions.socketTimeout) || this._socketTimeout;
-        this._socketTimeout = info.options.timeout;
-        info.options.headers = this._mergeHeaders(headers);
-        if (this.userAgent != null) {
-            info.options.headers["user-agent"] = this.userAgent;
-        }
-        info.options.agent = this._getAgent(info.parsedUrl);
-        // gives handlers an opportunity to participate
-        if (this.handlers && !this._isPresigned(url.format(requestUrl))) {
-            this.handlers.forEach((handler) => {
-                handler.prepareRequest(info.options);
-            });
-        }
-        return info;
-    }
-    _isPresigned(requestUrl) {
-        if (this.requestOptions && this.requestOptions.presignedUrlPatterns) {
-            const patterns = this.requestOptions.presignedUrlPatterns;
-            for (let i = 0; i < patterns.length; i++) {
-                if (requestUrl.match(patterns[i])) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    _mergeHeaders(headers) {
-        const lowercaseKeys = obj => Object.keys(obj).reduce((c, k) => (c[k.toLowerCase()] = obj[k], c), {});
-        if (this.requestOptions && this.requestOptions.headers) {
-            return Object.assign({}, lowercaseKeys(this.requestOptions.headers), lowercaseKeys(headers));
-        }
-        return lowercaseKeys(headers || {});
-    }
-    _getAgent(parsedUrl) {
-        let agent;
-        let proxy = this._getProxy(parsedUrl);
-        let useProxy = proxy.proxyUrl && proxy.proxyUrl.hostname && !this._isMatchInBypassProxyList(parsedUrl);
-        if (this._keepAlive && useProxy) {
-            agent = this._proxyAgent;
-        }
-        if (this._keepAlive && !useProxy) {
-            agent = this._agent;
-        }
-        // if agent is already assigned use that agent.
-        if (!!agent) {
-            return agent;
-        }
-        const usingSsl = parsedUrl.protocol === 'https:';
-        let maxSockets = 100;
-        if (!!this.requestOptions) {
-            maxSockets = this.requestOptions.maxSockets || http.globalAgent.maxSockets;
-        }
-        if (useProxy) {
-            // If using proxy, need tunnel
-            if (!tunnel) {
-                tunnel = __nccwpck_require__(294);
-            }
-            const agentOptions = {
-                maxSockets: maxSockets,
-                keepAlive: this._keepAlive,
-                proxy: {
-                    proxyAuth: proxy.proxyAuth,
-                    host: proxy.proxyUrl.hostname,
-                    port: proxy.proxyUrl.port
-                },
-            };
-            let tunnelAgent;
-            const overHttps = proxy.proxyUrl.protocol === 'https:';
-            if (usingSsl) {
-                tunnelAgent = overHttps ? tunnel.httpsOverHttps : tunnel.httpsOverHttp;
-            }
-            else {
-                tunnelAgent = overHttps ? tunnel.httpOverHttps : tunnel.httpOverHttp;
-            }
-            agent = tunnelAgent(agentOptions);
-            this._proxyAgent = agent;
-        }
-        // if reusing agent across request and tunneling agent isn't assigned create a new agent
-        if (this._keepAlive && !agent) {
-            const options = { keepAlive: this._keepAlive, maxSockets: maxSockets };
-            agent = usingSsl ? new https.Agent(options) : new http.Agent(options);
-            this._agent = agent;
-        }
-        // if not using private agent and tunnel agent isn't setup then use global agent
-        if (!agent) {
-            agent = usingSsl ? https.globalAgent : http.globalAgent;
-        }
-        if (usingSsl && this._ignoreSslError) {
-            // we don't want to set NODE_TLS_REJECT_UNAUTHORIZED=0 since that will affect request for entire process
-            // http.RequestOptions doesn't expose a way to modify RequestOptions.agent.options
-            // we have to cast it to any and change it directly
-            agent.options = Object.assign(agent.options || {}, { rejectUnauthorized: false });
-        }
-        if (usingSsl && this._certConfig) {
-            agent.options = Object.assign(agent.options || {}, { ca: this._ca, cert: this._cert, key: this._key, passphrase: this._certConfig.passphrase });
-        }
-        return agent;
-    }
-    _getProxy(parsedUrl) {
-        let usingSsl = parsedUrl.protocol === 'https:';
-        let proxyConfig = this._httpProxy;
-        // fallback to http_proxy and https_proxy env
-        let https_proxy = process.env[EnvironmentVariables.HTTPS_PROXY];
-        let http_proxy = process.env[EnvironmentVariables.HTTP_PROXY];
-        if (!proxyConfig) {
-            if (https_proxy && usingSsl) {
-                proxyConfig = {
-                    proxyUrl: https_proxy
-                };
-            }
-            else if (http_proxy) {
-                proxyConfig = {
-                    proxyUrl: http_proxy
-                };
-            }
-        }
-        let proxyUrl;
-        let proxyAuth;
-        if (proxyConfig) {
-            if (proxyConfig.proxyUrl.length > 0) {
-                proxyUrl = url.parse(proxyConfig.proxyUrl);
-            }
-            if (proxyConfig.proxyUsername || proxyConfig.proxyPassword) {
-                proxyAuth = proxyConfig.proxyUsername + ":" + proxyConfig.proxyPassword;
-            }
-        }
-        return { proxyUrl: proxyUrl, proxyAuth: proxyAuth };
-    }
-    _isMatchInBypassProxyList(parsedUrl) {
-        if (!this._httpProxyBypassHosts) {
-            return false;
-        }
-        let bypass = false;
-        this._httpProxyBypassHosts.forEach(bypassHost => {
-            if (bypassHost.test(parsedUrl.href)) {
-                bypass = true;
-            }
-        });
-        return bypass;
-    }
-    _performExponentialBackoff(retryNumber) {
-        retryNumber = Math.min(ExponentialBackoffCeiling, retryNumber);
-        const ms = ExponentialBackoffTimeSlice * Math.pow(2, retryNumber);
-        return new Promise(resolve => setTimeout(() => resolve(), ms));
-    }
-}
-exports.HttpClient = HttpClient;
-
-
-/***/ }),
-
-/***/ 405:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const httpm = __nccwpck_require__(538);
-const util = __nccwpck_require__(470);
-class RestClient {
-    /**
-     * Creates an instance of the RestClient
-     * @constructor
-     * @param {string} userAgent - userAgent for requests
-     * @param {string} baseUrl - (Optional) If not specified, use full urls per request.  If supplied and a function passes a relative url, it will be appended to this
-     * @param {ifm.IRequestHandler[]} handlers - handlers are typically auth handlers (basic, bearer, ntlm supplied)
-     * @param {ifm.IRequestOptions} requestOptions - options for each http requests (http proxy setting, socket timeout)
-     */
-    constructor(userAgent, baseUrl, handlers, requestOptions) {
-        this.client = new httpm.HttpClient(userAgent, handlers, requestOptions);
-        if (baseUrl) {
-            this._baseUrl = baseUrl;
-        }
-    }
-    /**
-     * Gets a resource from an endpoint
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} requestUrl - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    options(requestUrl, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(requestUrl, this._baseUrl);
-            let res = yield this.client.options(url, this._headersFromOptions(options));
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Gets a resource from an endpoint
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified url or relative path
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    get(resource, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl, (options || {}).queryParameters);
-            let res = yield this.client.get(url, this._headersFromOptions(options));
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Deletes a resource from an endpoint
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    del(resource, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl, (options || {}).queryParameters);
-            let res = yield this.client.del(url, this._headersFromOptions(options));
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Creates resource(s) from an endpoint
-     * T type of object returned.
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    create(resource, resources, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl);
-            let headers = this._headersFromOptions(options, true);
-            let data = JSON.stringify(resources, null, 2);
-            let res = yield this.client.post(url, data, headers);
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Updates resource(s) from an endpoint
-     * T type of object returned.
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    update(resource, resources, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl);
-            let headers = this._headersFromOptions(options, true);
-            let data = JSON.stringify(resources, null, 2);
-            let res = yield this.client.patch(url, data, headers);
-            return this.processResponse(res, options);
-        });
-    }
-    /**
-     * Replaces resource(s) from an endpoint
-     * T type of object returned.
-     * Be aware that not found returns a null.  Other error conditions reject the promise
-     * @param {string} resource - fully qualified or relative url
-     * @param {IRequestOptions} requestOptions - (optional) requestOptions object
-     */
-    replace(resource, resources, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(resource, this._baseUrl);
-            let headers = this._headersFromOptions(options, true);
-            let data = JSON.stringify(resources, null, 2);
-            let res = yield this.client.put(url, data, headers);
-            return this.processResponse(res, options);
-        });
-    }
-    uploadStream(verb, requestUrl, stream, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let url = util.getUrl(requestUrl, this._baseUrl);
-            let headers = this._headersFromOptions(options, true);
-            let res = yield this.client.sendStream(verb, url, stream, headers);
-            return this.processResponse(res, options);
-        });
-    }
-    _headersFromOptions(options, contentType) {
-        options = options || {};
-        let headers = options.additionalHeaders || {};
-        headers["Accept"] = options.acceptHeader || "application/json";
-        if (contentType) {
-            let found = false;
-            for (let header in headers) {
-                if (header.toLowerCase() == "content-type") {
-                    found = true;
-                }
-            }
-            if (!found) {
-                headers["Content-Type"] = 'application/json; charset=utf-8';
-            }
-        }
-        return headers;
-    }
-    static dateTimeDeserializer(key, value) {
-        if (typeof value === 'string') {
-            let a = new Date(value);
-            if (!isNaN(a.valueOf())) {
-                return a;
-            }
-        }
-        return value;
-    }
-    processResponse(res, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-                const statusCode = res.message.statusCode;
-                const response = {
-                    statusCode: statusCode,
-                    result: null,
-                    headers: {}
-                };
-                // not found leads to null obj returned
-                if (statusCode == httpm.HttpCodes.NotFound) {
-                    resolve(response);
-                }
-                let obj;
-                let contents;
-                // get the result from the body
-                try {
-                    contents = yield res.readBody();
-                    if (contents && contents.length > 0) {
-                        if (options && options.deserializeDates) {
-                            obj = JSON.parse(contents, RestClient.dateTimeDeserializer);
-                        }
-                        else {
-                            obj = JSON.parse(contents);
-                        }
-                        if (options && options.responseProcessor) {
-                            response.result = options.responseProcessor(obj);
-                        }
-                        else {
-                            response.result = obj;
-                        }
-                    }
-                    response.headers = res.message.headers;
-                }
-                catch (err) {
-                    // Invalid resource (contents not json);  leaving result obj null
-                }
-                // note that 3xx redirects are handled by the http layer.
-                if (statusCode > 299) {
-                    let msg;
-                    // if exception/error in body, attempt to get better error
-                    if (obj && obj.message) {
-                        msg = obj.message;
-                    }
-                    else if (contents && contents.length > 0) {
-                        // it may be the case that the exception is in the body message as string
-                        msg = contents;
-                    }
-                    else {
-                        msg = "Failed request: (" + statusCode + ")";
-                    }
-                    let err = new Error(msg);
-                    // attach statusCode and body obj (if available) to the error object
-                    err['statusCode'] = statusCode;
-                    if (response.result) {
-                        err['result'] = response.result;
-                    }
-                    reject(err);
-                }
-                else {
-                    resolve(response);
-                }
-            }));
-        });
-    }
-}
-exports.RestClient = RestClient;
-
-
-/***/ }),
-
-/***/ 470:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const qs = __nccwpck_require__(760);
-const url = __nccwpck_require__(310);
-const path = __nccwpck_require__(17);
-const zlib = __nccwpck_require__(796);
-/**
- * creates an url from a request url and optional base url (http://server:8080)
- * @param {string} resource - a fully qualified url or relative path
- * @param {string} baseUrl - an optional baseUrl (http://server:8080)
- * @param {IRequestOptions} options - an optional options object, could include QueryParameters e.g.
- * @return {string} - resultant url
- */
-function getUrl(resource, baseUrl, queryParams) {
-    const pathApi = path.posix || path;
-    let requestUrl = '';
-    if (!baseUrl) {
-        requestUrl = resource;
-    }
-    else if (!resource) {
-        requestUrl = baseUrl;
-    }
-    else {
-        const base = url.parse(baseUrl);
-        const resultantUrl = url.parse(resource);
-        // resource (specific per request) elements take priority
-        resultantUrl.protocol = resultantUrl.protocol || base.protocol;
-        resultantUrl.auth = resultantUrl.auth || base.auth;
-        resultantUrl.host = resultantUrl.host || base.host;
-        resultantUrl.pathname = pathApi.resolve(base.pathname, resultantUrl.pathname);
-        if (!resultantUrl.pathname.endsWith('/') && resource.endsWith('/')) {
-            resultantUrl.pathname += '/';
-        }
-        requestUrl = url.format(resultantUrl);
-    }
-    return queryParams ?
-        getUrlWithParsedQueryParams(requestUrl, queryParams) :
-        requestUrl;
-}
-exports.getUrl = getUrl;
-/**
- *
- * @param {string} requestUrl
- * @param {IRequestQueryParams} queryParams
- * @return {string} - Request's URL with Query Parameters appended/parsed.
- */
-function getUrlWithParsedQueryParams(requestUrl, queryParams) {
-    const url = requestUrl.replace(/\?$/g, ''); // Clean any extra end-of-string "?" character
-    const parsedQueryParams = qs.stringify(queryParams.params, buildParamsStringifyOptions(queryParams));
-    return `${url}${parsedQueryParams}`;
-}
-/**
- * Build options for QueryParams Stringifying.
- *
- * @param {IRequestQueryParams} queryParams
- * @return {object}
- */
-function buildParamsStringifyOptions(queryParams) {
-    let options = {
-        addQueryPrefix: true,
-        delimiter: (queryParams.options || {}).separator || '&',
-        allowDots: (queryParams.options || {}).shouldAllowDots || false,
-        arrayFormat: (queryParams.options || {}).arrayFormat || 'repeat',
-        encodeValuesOnly: (queryParams.options || {}).shouldOnlyEncodeValues || true
-    };
-    return options;
-}
-/**
- * Decompress/Decode gzip encoded JSON
- * Using Node.js built-in zlib module
- *
- * @param {Buffer} buffer
- * @param {string} charset? - optional; defaults to 'utf-8'
- * @return {Promise<string>}
- */
-function decompressGzippedContent(buffer, charset) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
-            zlib.gunzip(buffer, function (error, buffer) {
-                if (error) {
-                    reject(error);
-                }
-                resolve(buffer.toString(charset || 'utf-8'));
-            });
-        }));
-    });
-}
-exports.decompressGzippedContent = decompressGzippedContent;
-/**
- * Builds a RegExp to test urls against for deciding
- * wether to bypass proxy from an entry of the
- * environment variable setting NO_PROXY
- *
- * @param {string} bypass
- * @return {RegExp}
- */
-function buildProxyBypassRegexFromEnv(bypass) {
-    try {
-        // We need to keep this around for back-compat purposes
-        return new RegExp(bypass, 'i');
-    }
-    catch (err) {
-        if (err instanceof SyntaxError && (bypass || "").startsWith("*")) {
-            let wildcardEscaped = bypass.replace('*', '(.*)');
-            return new RegExp(wildcardEscaped, 'i');
-        }
-        throw err;
-    }
-}
-exports.buildProxyBypassRegexFromEnv = buildProxyBypassRegexFromEnv;
-/**
- * Obtain Response's Content Charset.
- * Through inspecting `content-type` response header.
- * It Returns 'utf-8' if NO charset specified/matched.
- *
- * @param {IHttpClientResponse} response
- * @return {string} - Content Encoding Charset; Default=utf-8
- */
-function obtainContentCharset(response) {
-    // Find the charset, if specified.
-    // Search for the `charset=CHARSET` string, not including `;,\r\n`
-    // Example: content-type: 'application/json;charset=utf-8'
-    // |__ matches would be ['charset=utf-8', 'utf-8', index: 18, input: 'application/json; charset=utf-8']
-    // |_____ matches[1] would have the charset :tada: , in our example it's utf-8
-    // However, if the matches Array was empty or no charset found, 'utf-8' would be returned by default.
-    const nodeSupportedEncodings = ['ascii', 'utf8', 'utf16le', 'ucs2', 'base64', 'binary', 'hex'];
-    const contentType = response.message.headers['content-type'] || '';
-    const matches = contentType.match(/charset=([^;,\r\n]+)/i);
-    return (matches && matches[1] && nodeSupportedEncodings.indexOf(matches[1]) != -1) ? matches[1] : 'utf-8';
-}
-exports.obtainContentCharset = obtainContentCharset;
-
-
-/***/ }),
-
 /***/ 491:
 /***/ ((module) => {
 
@@ -2739,27 +2158,11 @@ module.exports = require("tls");
 
 /***/ }),
 
-/***/ 310:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("url");
-
-/***/ }),
-
 /***/ 837:
 /***/ ((module) => {
 
 "use strict";
 module.exports = require("util");
-
-/***/ }),
-
-/***/ 796:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("zlib");
 
 /***/ })
 

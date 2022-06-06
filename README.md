@@ -32,10 +32,11 @@ Stop chasing ghosts and wasting time. Bright doesn’t return false positives, s
 Bright tests for all common vulnerabilities, such as SQL injection, CSRF, XSS, and XXE -- as well as uncommon vulnerabilities, such as business logic vulnerabilities.
 
 More information is available on Bright’s:
-* [Website](https://www.brightsec.com/)
-* [Knowledge base](https://docs.brightsec.com/docs/quickstart)
-* [YouTube channel](https://www.youtube.com/channel/UCoIC0T1pmozq3eKLsUR2uUw)
-* [GitHub Actions](https://github.com/marketplace?query=neuralegion+)
+
+- [Website](https://www.brightsec.com/)
+- [Knowledge base](https://docs.brightsec.com/docs/quickstart)
+- [YouTube channel](https://www.youtube.com/channel/UCoIC0T1pmozq3eKLsUR2uUw)
+- [GitHub Actions](https://github.com/marketplace?query=neuralegion+)
 
 # Inputs
 
@@ -62,14 +63,15 @@ _Example:_ `restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ)`
 ### `discovery_types`
 
 **Required**. Array of discovery types. The following types are available:
-* `archive` - uses an uploaded HAR-file for a scan
-* `crawler` - uses a crawler to define the attack surface for a scan
-* `oas` - uses an uploaded OpenAPI schema for a scan <br>
- If no discovery type is specified, `crawler` is applied by default.
+
+- `archive` - uses an uploaded HAR-file for a scan
+- `crawler` - uses a crawler to define the attack surface for a scan
+- `oas` - uses an uploaded OpenAPI schema for a scan <br>
+  If no discovery type is specified, `crawler` is applied by default.
 
 _Example:_
 
-```yml
+```yaml
 discovery_types: |
   [ "crawler", "archive" ]
 ```
@@ -93,7 +95,7 @@ FILE_ID=$(nexploit-cli archive:upload   \
 
 _Example:_
 
-```
+```yaml
 crawler_urls: |
   [ "http://vulnerable-bank.com" ]
 ```
@@ -101,6 +103,44 @@ crawler_urls: |
 ### `hosts_filter`
 
 **Required** when the the discovery type is set to `archive`. Allows selecting specific hosts for a scan.
+
+### `exclude_params`
+
+A list of regex patterns for parameter names you would like to ignore during the tests.
+
+_Example:_
+
+```yaml
+exclude_params: |
+  [ "userId", "orgId" ]
+```
+
+### `exclude_entry_points`
+
+A list of JSON strings that contain patterns for entry points you would like to ignore during the tests.
+
+_Example:_
+
+```yaml
+exclude_entry_points: |
+  [ { "methods": [ "POST" ], "patterns": [ "users\/.+\/?$" ] ]
+```
+
+To remove default exclusions pass an empty array as follows:
+
+_Example:_
+
+```yaml
+exclude_entry_points: |
+  []
+```
+
+To apply patterns for all HTTP methods, you can set an empty array to `methods`:
+
+```yaml
+exclude_entry_points: |
+  [ { "methods": [], "patterns": [ "users\/.+\/?$" ] ]
+```
 
 ## Outputs
 
@@ -111,43 +151,42 @@ Url of the resulting scan
 ### `id`
 
 ID of the created scan. This ID could then be used to restart the scan, or for the following GitHub actions:
-* [Bright Wait for Issues](https://github.com/marketplace/actions/nexploit-wait-for-issues)
-* [Bright Stop Scan](https://github.com/marketplace/actions/nexploit-stop-scan)
+
+- [Bright Wait for Issues](https://github.com/marketplace/actions/nexploit-wait-for-issues)
+- [Bright Stop Scan](https://github.com/marketplace/actions/nexploit-stop-scan)
 
 ## Example usage
 
 ### Start a new scan with parameters
 
-```yml
+```yaml
 steps:
-    - name: Start NeuraLegion Scan
-      id: start
-      uses: NeuraLegion/run-scan@v1.1
-      with:
-        api_token: ${{ secrets.NEURALEGION_TOKEN }}
-        name: GitHub scan ${{ github.sha }}
-        discovery_types: |
-          [ "crawler", "archive" ]
-        crawler_urls: |
-          [ "http://vulnerable-bank.com" ]
-        file_id: LiYknMYSdbSZbqgMaC9Sj
-        hosts_filter: |
-          [ ]
-    - name: Get the output scan url
-      run: echo "The scan was started on ${{ steps.start.outputs.url }}"
+  - name: Start NeuraLegion Scan
+    id: start
+    uses: NeuraLegion/run-scan@v1.1
+    with:
+      api_token: ${{ secrets.NEURALEGION_TOKEN }}
+      name: GitHub scan ${{ github.sha }}
+      discovery_types: |
+        [ "crawler", "archive" ]
+      crawler_urls: |
+        [ "http://vulnerable-bank.com" ]
+      file_id: LiYknMYSdbSZbqgMaC9Sj
+  - name: Get the output scan url
+    run: echo "The scan was started on ${{ steps.start.outputs.url }}"
 ```
 
 #### Restart an existing scan
 
-```yml
+```yaml
 steps:
-    - name: Start NeuraLegion Scan
-      id: start
-      uses: NeuraLegion/run-scan@v1.1
-      with:
-        api_token: ${{ secrets.NEURALEGION_TOKEN }}
-        name: GitHub scan ${{ github.sha }}
-        restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
-    - name: Get the output scan url
-      run: echo "The scan was started on ${{ steps.start.outputs.url }}"
+  - name: Start NeuraLegion Scan
+    id: start
+    uses: NeuraLegion/run-scan@v1.1
+    with:
+      api_token: ${{ secrets.NEURALEGION_TOKEN }}
+      name: GitHub scan ${{ github.sha }}
+      restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
+  - name: Get the output scan url
+    run: echo "The scan was started on ${{ steps.start.outputs.url }}"
 ```
