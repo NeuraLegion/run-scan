@@ -22,27 +22,27 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.5.0",
-    "@actions/github": "^5.0.0",
-    "typed-rest-client": "^1.8.6"
+    "@actions/core": "^1.8.2",
+    "@actions/github": "^5.0.3",
+    "@actions/http-client": "^2.0.1"
   },
   "devDependencies": {
-    "@commitlint/cli": "^13.2.0",
-    "@commitlint/config-conventional": "^13.2.0",
+    "@commitlint/cli": "^17.0.2",
+    "@commitlint/config-conventional": "^17.0.2",
     "@types/node": "^16.9.4",
-    "@typescript-eslint/eslint-plugin": "^4.32.0",
-    "@typescript-eslint/parser": "^4.32.0",
-    "@vercel/ncc": "^0.33.4",
-    "eslint": "^7.32.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-import-resolver-typescript": "^2.5.0",
-    "eslint-plugin-import": "^2.24.2",
+    "@typescript-eslint/eslint-plugin": "^5.27.0",
+    "@typescript-eslint/parser": "^5.27.0",
+    "@vercel/ncc": "^0.34.0",
+    "eslint": "^8.17.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-import-resolver-typescript": "^2.7.1",
+    "eslint-plugin-import": "^2.26.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "husky": "^7.0.2",
-    "is-ci": "^3.0.0",
-    "lint-staged": "^11.1.2",
-    "prettier": "^2.4.1",
-    "typescript": "^4.4.3"
+    "husky": "^8.0.1",
+    "is-ci": "^3.0.1",
+    "lint-staged": "^13.0.0",
+    "prettier": "^2.6.2",
+    "typescript": "^4.7.3"
   },
   "commitlint": {
     "extends": [

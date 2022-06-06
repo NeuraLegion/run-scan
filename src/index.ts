@@ -1,95 +1,106 @@
 import * as core from '@actions/core';
-import * as rm from 'typed-rest-client/RestClient';
+import { HttpClient } from '@actions/http-client';
 
-const apiToken = core.getInput('api_token');
-const restartScanID = core.getInput('restart_scan');
-const name = core.getInput('name');
-const fileId = core.getInput('file_id');
-const crawlerUrls = getArray('crawler_urls');
-const discoveryTypesIn = getArray('discovery_types');
-const module_in = core.getInput('module');
-const hostsFilter = getArray('hosts_filter');
-const type = core.getInput('type');
-const hostname = core.getInput('hostname');
-
-function getArray(inputName: string): string[] | undefined {
-  const input = core.getInput(inputName);
-
-  try {
-    const elements = JSON.parse(input);
-
-    if (elements instanceof Array) {
-      return elements.length ? elements : undefined;
-    } else {
-      return undefined;
-    }
-  } catch (err) {
-    core.debug(inputName + ` failed: ${err}` + ' => ' + input);
-
-    return undefined;
-  }
+interface RequestExclusion {
+  patterns: string[];
+  methods: string[];
 }
 
-const baseUrl = hostname ? `https://${hostname}` : 'https://app.neuralegion.com';
-
-const restc: rm.RestClient = new rm.RestClient('GitHub Actions', baseUrl);
-
-interface Scan {
-  id: string;
-}
-
-async function retest(token: string, uuid: string, scanName?: string) {
-  try {
-    const options = {
-      additionalHeaders: { Authorization: `Api-Key ${token}` }
-    };
-    const restRes: rm.IRestResponse<Scan> = await restc.create<Scan>(
-      `api/v1/scans/${uuid}/retest`,
-      { name: scanName || 'GitHub Actions' },
-      options
-    );
-
-    if (restRes.statusCode < 300 && restRes.result) {
-      const url = `${baseUrl}/scans/${restRes.result.id}`;
-      core.setOutput('url', url);
-      core.setOutput('id', restRes.result.id);
-    } else {
-      core.setFailed(`Failed retest. Status code: ${restRes.statusCode}`);
-    }
-  } catch (err: any) {
-    core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
-  }
+interface Exclusions {
+  params?: string[];
+  requests?: RequestExclusion[];
 }
 
 interface NewScan {
   name: string;
   discoveryTypes: string[];
+  exclusions?: Exclusions;
   module?: string;
   crawlerUrls?: string[];
   fileId?: string;
   hostsFilter?: string[];
 }
 
-async function create(token: string, scan: NewScan) {
-  let restRes: rm.IRestResponse<Scan>;
-  try {
-    const options = {
-      additionalHeaders: { Authorization: `Api-Key ${token}` }
-    };
-    restRes = await restc.create<Scan>('api/v1/scans/', scan, options);
+interface Scan {
+  id: string;
+}
 
-    if (restRes.result && restRes.statusCode < 300) {
-      const id = restRes.result.id;
-      const url = `${baseUrl}/scans/${id}`;
+const getArray = <T = string>(inputName: string): T[] | undefined => {
+  const input = core.getInput(inputName);
+
+  try {
+    const elements = JSON.parse(input);
+
+    return elements instanceof Array ? elements : undefined;
+  } catch (err) {
+    core.debug(inputName + ` failed: ${err}` + ' => ' + input);
+  }
+};
+
+const apiToken = core.getInput('api_token');
+const restartScanID = core.getInput('restart_scan');
+const name = core.getInput('name');
+const fileId = core.getInput('file_id');
+const crawlerUrls = getArray('crawler_urls');
+const excludedParams = getArray('exclude_params');
+const excludedEntryPoints = getArray<RequestExclusion>('exclude_entry_points');
+const discoveryTypesIn = getArray('discovery_types');
+const module_in = core.getInput('module');
+const hostsFilter = getArray('hosts_filter');
+const type = core.getInput('type');
+const hostname = core.getInput('hostname');
+
+const baseUrl = hostname
+  ? `https://${hostname}`
+  : 'https://app.neuralegion.com';
+
+const client = new HttpClient('GitHub Actions', [], {
+  allowRetries: true,
+  maxRetries: 5,
+  headers: { authorization: `Api-Key ${apiToken}` }
+});
+
+const retest = async (uuid: string, scanName?: string) => {
+  try {
+    const response = await client.postJson<Scan>(
+      `${baseUrl}/api/v1/scans/${uuid}/retest`,
+      { name: scanName || 'GitHub Actions' }
+    );
+
+    if (response.statusCode < 300 && response.result) {
+      const { result } = response;
+      const url = `${baseUrl}/scans/${result.id}`;
+
       core.setOutput('url', url);
-      core.setOutput('id', id);
+      core.setOutput('id', result.id);
     } else {
-      core.setFailed(`Failed create scan. Status code: ${restRes.statusCode}`);
+      core.setFailed(`Failed retest. Status code: ${response.statusCode}`);
     }
   } catch (err: any) {
     core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
   }
-}
+};
+
+const create = async (scan: NewScan) => {
+  try {
+    const response = await client.postJson<Scan>(
+      `${baseUrl}/api/v1/scans`,
+      scan
+    );
+
+    if (response.statusCode < 300 && response.result) {
+      const { result } = response;
+      const url = `${baseUrl}/scans/${result.id}`;
+
+      core.setOutput('url', url);
+      core.setOutput('id', result.id);
+    } else {
+      core.setFailed(`Failed create scan. Status code: ${response.statusCode}`);
+    }
+  } catch (err: any) {
+    core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
+  }
+};
 
 if (restartScanID) {
   if (
@@ -102,7 +113,7 @@ if (restartScanID) {
       type
     )
   ) {
-    retest(apiToken, restartScanID, name);
+    retest(restartScanID, name);
   } else {
     core.setFailed(
       "You don't need parameters, other than api_token, restart_scan and name, if you just want to restart an existing scan"
@@ -110,14 +121,20 @@ if (restartScanID) {
   }
 } else {
   const module = module_in || 'dast';
-  const discoveryTypes = discoveryTypesIn || ['archive'];
+  const discoveryTypes = !discoveryTypesIn?.length
+    ? ['archive']
+    : discoveryTypesIn;
 
-  create(apiToken, {
+  create({
     name,
     discoveryTypes,
     module,
     crawlerUrls,
     fileId,
-    hostsFilter
+    hostsFilter,
+    exclusions: {
+      requests: excludedEntryPoints,
+      params: excludedParams
+    }
   });
 }

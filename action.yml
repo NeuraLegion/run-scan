@@ -22,6 +22,12 @@ inputs:
   crawler_urls:
     description: 'Crawler URLs'
     required: false
+  exclude_params:
+    description: 'A list of regex patterns for parameter names you would like to ignore during the tests.'
+    required: false
+  exclude_entry_points:
+    description: 'A list of JSON strings that contain patterns for entry points you would like to ignore during the tests. Pass an empty array to remove default exclusions. To apply patterns for all HTTP methods, you can set an empty array to "methods"'
+    required: false
   module:
     description: 'Possible values: *dast*, *fuzzer*'
     required: false
@@ -37,7 +43,7 @@ outputs:
   url:
     description: 'Url of the resulting scan'
   id:
-    description: Scan ID
+    description: 'Scan ID'
 runs:
   using: 'node12'
   main: 'dist/index.js'
