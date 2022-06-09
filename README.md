@@ -123,7 +123,7 @@ _Example:_
 
 ```yaml
 exclude_entry_points: |
-  [ { "methods": [ "POST" ], "patterns": [ "users\/.+\/?$" ] ]
+  [ { "methods": [ "POST" ], "patterns": [ "users\/.+\/?$" ] } ]
 ```
 
 To remove default exclusions pass an empty array as follows:
@@ -139,7 +139,7 @@ To apply patterns for all HTTP methods, you can set an empty array to `methods`:
 
 ```yaml
 exclude_entry_points: |
-  [ { "methods": [], "patterns": [ "users\/.+\/?$" ] ]
+  [ { "methods": [], "patterns": [ "users\/.+\/?$" ] } ]
 ```
 
 ## Outputs
