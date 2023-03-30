@@ -1,6 +1,126 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 677:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateConfig = exports.isValidUrl = void 0;
+const discovery_1 = __nccwpck_require__(180);
+const tests_1 = __nccwpck_require__(819);
+const url_1 = __nccwpck_require__(310);
+const invalidUrlProtocols = new Set([
+    'javascript:',
+    'file:',
+    'data:',
+    'mailto:',
+    'ftp:',
+    'blob:',
+    'about:',
+    'ssh:',
+    'tel:',
+    'view-source:',
+    'ws:',
+    'wss:'
+]);
+const isValidUrl = (url) => {
+    try {
+        const { protocol } = new url_1.URL(url);
+        return !invalidUrlProtocols.has(protocol);
+    }
+    catch (_a) {
+        return false;
+    }
+};
+exports.isValidUrl = isValidUrl;
+function validateCrawlerUrls(crawlerUrls, discoveryTypes) {
+    if (crawlerUrls) {
+        if (!discoveryTypes.includes(discovery_1.Discovery.CRAWLER)) {
+            throw new Error(`Invalid discovery. When specifying a crawler URLs, the discovery type must be "crawler". The current discovery types are: ${discoveryTypes.join(', ')}`);
+        }
+        if (!crawlerUrls.length) {
+            throw new Error('No crawler URLs configured.');
+        }
+    }
+    else {
+        if (discoveryTypes.includes(discovery_1.Discovery.CRAWLER)) {
+            throw new Error(`Invalid discovery. When setting a discovery type to either "crawler", the crawler URLs must be provided.`);
+        }
+    }
+}
+function validateFileId(fileId, discoveryTypes) {
+    if (fileId) {
+        if (!(discoveryTypes.includes(discovery_1.Discovery.OAS) ||
+            discoveryTypes.includes(discovery_1.Discovery.ARCHIVE))) {
+            throw new Error(`Invalid discovery. When specifying a file ID, the discovery type must be either "oas" or "archive". The current discovery types are: ${discoveryTypes.join(', ')}`);
+        }
+    }
+    else {
+        if (discoveryTypes.includes(discovery_1.Discovery.OAS) ||
+            discoveryTypes.includes(discovery_1.Discovery.ARCHIVE)) {
+            throw new Error(`Invalid discovery. When setting a discovery type to either "oas" or "archive", the file ID must be provided.`);
+        }
+    }
+}
+const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests }) => {
+    (0, discovery_1.validateDiscovery)(discoveryTypes);
+    validateFileId(fileId, discoveryTypes);
+    validateCrawlerUrls(crawlerUrls, discoveryTypes);
+    if (tests) {
+        (0, tests_1.validateTests)(tests);
+    }
+};
+exports.validateConfig = validateConfig;
+
+
+/***/ }),
+
+/***/ 180:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateDiscovery = exports.Discovery = void 0;
+var Discovery;
+(function (Discovery) {
+    Discovery["ARCHIVE"] = "archive";
+    Discovery["CRAWLER"] = "crawler";
+    Discovery["OAS"] = "oas";
+})(Discovery = exports.Discovery || (exports.Discovery = {}));
+const validateDiscovery = (discoveryTypes) => {
+    if (discoveryTypes.some((x) => !isValidDiscovery(x))) {
+        throw new Error('Unknown discovery type supplied.');
+    }
+    const uniqueDiscoveryTypes = new Set(discoveryTypes);
+    if (uniqueDiscoveryTypes.size !== discoveryTypes.length) {
+        throw new Error('Discovery contains duplicate values.');
+    }
+    if (uniqueDiscoveryTypes.size !== 1) {
+        disallowDiscoveryCombination(uniqueDiscoveryTypes);
+    }
+};
+exports.validateDiscovery = validateDiscovery;
+const isValidDiscovery = (x) => Object.values(Discovery).includes(x);
+const disallowDiscoveryCombination = (discoveryTypes) => {
+    const disallowedCombinations = getDisallowedDiscoveryCombination([
+        ...discoveryTypes
+    ]);
+    if (disallowedCombinations.length) {
+        const [firstInvalidCombination] = disallowedCombinations;
+        throw new Error(`The discovery list cannot include both ${firstInvalidCombination === null || firstInvalidCombination === void 0 ? void 0 : firstInvalidCombination[0]} and any of ${firstInvalidCombination === null || firstInvalidCombination === void 0 ? void 0 : firstInvalidCombination[1].join(', ')} simultaneously.`);
+    }
+};
+const disallowedDiscoveryCombinations = new Map([
+    [Discovery.OAS, [Discovery.CRAWLER, Discovery.ARCHIVE]]
+]);
+const getDisallowedDiscoveryCombination = (discoveryTypes) => [...disallowedDiscoveryCombinations].filter(([x]) => discoveryTypes.includes(x));
+
+
+/***/ }),
+
 /***/ 283:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -39,8 +159,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core = __importStar(__nccwpck_require__(186));
+const discovery_1 = __nccwpck_require__(180);
+const config_1 = __nccwpck_require__(677);
 const http_client_1 = __nccwpck_require__(255);
+const core = __importStar(__nccwpck_require__(186));
 const getArray = (inputName) => {
     const input = core.getInput(inputName);
     try {
@@ -58,6 +180,7 @@ const fileId = core.getInput('file_id');
 const crawlerUrls = getArray('crawler_urls');
 const excludedParams = getArray('exclude_params');
 const excludedEntryPoints = getArray('exclude_entry_points');
+const tests = getArray('tests');
 const discoveryTypesIn = getArray('discovery_types');
 const module_in = core.getInput('module');
 const hostsFilter = getArray('hosts_filter');
@@ -88,9 +211,9 @@ const retest = (uuid, scanName) => __awaiter(void 0, void 0, void 0, function* (
         core.setFailed(`Failed (${err.statusCode}) ${err.message}`);
     }
 });
-const create = (scan) => __awaiter(void 0, void 0, void 0, function* () {
+const create = (config) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const response = yield client.postJson(`${baseUrl}/api/v1/scans`, scan);
+        const response = yield client.postJson(`${baseUrl}/api/v1/scans`, config);
         if (response.statusCode < 300 && response.result) {
             const { result } = response;
             const url = `${baseUrl}/scans/${result.id}`;
@@ -111,7 +234,8 @@ if (restartScanID) {
         discoveryTypesIn ||
         module_in ||
         hostsFilter ||
-        type)) {
+        type ||
+        tests)) {
         retest(restartScanID, name);
     }
     else {
@@ -121,21 +245,160 @@ if (restartScanID) {
 else {
     const module = module_in || 'dast';
     const discoveryTypes = !(discoveryTypesIn === null || discoveryTypesIn === void 0 ? void 0 : discoveryTypesIn.length)
-        ? ['archive']
+        ? [discovery_1.Discovery.ARCHIVE]
         : discoveryTypesIn;
-    create({
+    const uniqueTests = tests ? [...new Set(tests)] : undefined;
+    const config = {
         name,
         discoveryTypes,
         module,
         crawlerUrls,
         fileId,
         hostsFilter,
+        tests: uniqueTests,
         exclusions: {
             requests: excludedEntryPoints,
             params: excludedParams
         }
-    });
+    };
+    try {
+        (0, config_1.validateConfig)(config);
+    }
+    catch (e) {
+        core.setFailed(e.message);
+        throw e;
+    }
+    create(config);
 }
+
+
+/***/ }),
+
+/***/ 819:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateTests = exports.hasExclusiveTests = exports.hasExpensiveTests = exports.isValidTest = exports.exclusiveTests = exports.expensiveTests = exports.TestType = void 0;
+const core = __importStar(__nccwpck_require__(186));
+var TestType;
+(function (TestType) {
+    TestType["ANGULAR_CSTI"] = "angular_csti";
+    TestType["BACKUP_LOCATIONS"] = "backup_locations";
+    TestType["BROKEN_SAML_AUTH"] = "broken_saml_auth";
+    TestType["BRUTE_FORCE_LOGIN"] = "brute_force_login";
+    TestType["BUSINESS_CONSTRAINT_BYPASS"] = "business_constraint_bypass";
+    TestType["COMMON_FILES"] = "common_files";
+    TestType["COOKIE_SECURITY"] = "cookie_security";
+    TestType["CSRF"] = "csrf";
+    TestType["CVE"] = "cve_test";
+    TestType["DATE_MANIPULATION"] = "date_manipulation";
+    TestType["DEFAULT_LOGIN_LOCATION"] = "default_login_location";
+    TestType["DIRECTORY_LISTING"] = "directory_listing";
+    TestType["DOM_XSS"] = "dom_xss";
+    TestType["EMAIL_INJECTION"] = "email_injection";
+    TestType["EXCESSIVE_DATA_EXPOSURE"] = "excessive_data_exposure";
+    TestType["EXPOSED_COUCH_DB_APIS"] = "exposed_couch_db_apis";
+    TestType["FILE_UPLOAD"] = "file_upload";
+    TestType["FULL_PATH_DISCLOSURE"] = "full_path_disclosure";
+    TestType["GRAPHQL_INTROSPECTION"] = "graphql_introspection";
+    TestType["HEADER_SECURITY"] = "header_security";
+    TestType["HRS"] = "hrs";
+    TestType["HTML_INJECTION"] = "html_injection";
+    TestType["HTTP_METHOD_FUZZING"] = "http_method_fuzzing";
+    TestType["HTTP_RESPONSE_SPLITTING"] = "http_response_splitting";
+    TestType["ID_ENUMERATION"] = "id_enumeration";
+    TestType["IMPROPER_ASSET_MANAGEMENT"] = "improper_asset_management";
+    TestType["INSECURE_TLS_CONFIGURATION"] = "insecure_tls_configuration";
+    TestType["JWT"] = "jwt";
+    TestType["LDAPI"] = "ldapi";
+    TestType["LFI"] = "lfi";
+    TestType["LRRL"] = "lrrl";
+    TestType["MASS_ASSIGNMENT"] = "mass_assignment";
+    TestType["NOSQL"] = "nosql";
+    TestType["OPEN_BUCKETS"] = "open_buckets";
+    TestType["OPEN_DATABASE"] = "open_database";
+    TestType["OSI"] = "osi";
+    TestType["PROTO_POLLUTION"] = "proto_pollution";
+    TestType["RETIRE_JS"] = "retire_js";
+    TestType["RFI"] = "rfi";
+    TestType["S3_TAKEOVER"] = "amazon_s3_takeover";
+    TestType["SECRET_TOKENS"] = "secret_tokens";
+    TestType["SERVER_SIDE_JS_INJECTION"] = "server_side_js_injection";
+    TestType["SQLI"] = "sqli";
+    TestType["SSRF"] = "ssrf";
+    TestType["SSTI"] = "ssti";
+    TestType["UNVALIDATED_REDIRECT"] = "unvalidated_redirect";
+    TestType["VERSION_CONTROL_SYSTEMS"] = "version_control_systems";
+    TestType["WEBDAV"] = "webdav";
+    TestType["WORDPRESS"] = "wordpress";
+    TestType["XPATHI"] = "xpathi";
+    TestType["XSS"] = "xss";
+    TestType["XXE"] = "xxe";
+})(TestType = exports.TestType || (exports.TestType = {}));
+exports.expensiveTests = [
+    TestType.BUSINESS_CONSTRAINT_BYPASS,
+    TestType.CVE,
+    TestType.DATE_MANIPULATION,
+    TestType.EXCESSIVE_DATA_EXPOSURE,
+    TestType.ID_ENUMERATION,
+    TestType.LRRL,
+    TestType.MASS_ASSIGNMENT,
+    TestType.RETIRE_JS,
+    // not implemented yet by the engine
+    TestType.ANGULAR_CSTI,
+    TestType.BACKUP_LOCATIONS,
+    TestType.EXPOSED_COUCH_DB_APIS,
+    TestType.HTTP_RESPONSE_SPLITTING,
+    TestType.HRS
+];
+exports.exclusiveTests = [TestType.LRRL];
+const isValidTest = (test) => Object.values(TestType).includes(test);
+exports.isValidTest = isValidTest;
+const hasExpensiveTests = (tests) => tests.some(x => exports.expensiveTests.includes(x));
+exports.hasExpensiveTests = hasExpensiveTests;
+const hasExclusiveTests = (tests) => tests.some(x => exports.exclusiveTests.includes(x)) && tests.length !== 1;
+exports.hasExclusiveTests = hasExclusiveTests;
+const validateTests = (uniqueTests) => {
+    const invalidTests = uniqueTests.filter(x => !(0, exports.isValidTest)(x));
+    if (invalidTests.length) {
+        throw new Error(`${invalidTests.join(', ')} tests are invalid. Please re-configure the scan.`);
+    }
+    if ((0, exports.hasExclusiveTests)(uniqueTests)) {
+        const chosenTests = uniqueTests.filter(x => exports.exclusiveTests.includes(x));
+        throw new Error(`${chosenTests.join(', ')} tests are mutually exclusive with other tests. Please re-configure the scan.`);
+    }
+    if ((0, exports.hasExpensiveTests)(uniqueTests)) {
+        const chosenTests = uniqueTests.filter(x => exports.expensiveTests.includes(x));
+        const warningMessage = `${chosenTests.join(', ')} tests are expensive. Please use them with caution.`;
+        core.warning(warningMessage);
+    }
+};
+exports.validateTests = validateTests;
 
 
 /***/ }),
@@ -2889,6 +3152,14 @@ module.exports = require("path");
 
 "use strict";
 module.exports = require("tls");
+
+/***/ }),
+
+/***/ 310:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("url");
 
 /***/ }),
 
