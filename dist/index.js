@@ -173,7 +173,7 @@ const getArray = (inputName) => {
         core.debug(inputName + ` failed: ${err}` + ' => ' + input);
     }
 };
-const apiToken = core.getInput('api_token');
+const apiToken = core.getInput('api_token', { required: true });
 const restartScanID = core.getInput('restart_scan');
 const name = core.getInput('name');
 const fileId = core.getInput('file_id');
@@ -248,19 +248,16 @@ else {
         ? [discovery_1.Discovery.ARCHIVE]
         : discoveryTypesIn;
     const uniqueTests = tests ? [...new Set(tests)] : undefined;
-    const config = {
-        name,
+    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name,
         discoveryTypes,
-        module,
-        crawlerUrls,
-        fileId,
-        hostsFilter,
-        tests: uniqueTests,
-        exclusions: {
-            requests: excludedEntryPoints,
-            params: excludedParams
+        module }, (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
+        ? {
+            exclusions: {
+                requests: excludedEntryPoints,
+                params: excludedParams
+            }
         }
-    };
+        : {}));
     try {
         (0, config_1.validateConfig)(config);
     }
