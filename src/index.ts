@@ -20,7 +20,7 @@ const getArray = <T = string>(inputName: string): T[] | undefined => {
   }
 };
 
-const apiToken = core.getInput('api_token');
+const apiToken = core.getInput('api_token', { required: true });
 const restartScanID = core.getInput('restart_scan');
 const name = core.getInput('name');
 const fileId = core.getInput('file_id');
@@ -114,14 +114,18 @@ if (restartScanID) {
     name,
     discoveryTypes,
     module,
-    crawlerUrls,
-    fileId,
-    hostsFilter,
-    tests: uniqueTests,
-    exclusions: {
-      requests: excludedEntryPoints,
-      params: excludedParams
-    }
+    ...(crawlerUrls ? { crawlerUrls } : {}),
+    ...(fileId ? { fileId } : {}),
+    ...(uniqueTests?.length ? { tests: uniqueTests } : {}),
+    ...(hostsFilter?.length ? { hostsFilter } : {}),
+    ...(excludedEntryPoints?.length || excludedParams?.length
+      ? {
+          exclusions: {
+            requests: excludedEntryPoints,
+            params: excludedParams
+          }
+        }
+      : {})
   };
 
   try {
