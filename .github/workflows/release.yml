@@ -30,7 +30,7 @@ jobs:
         cp action.yml release/
         cp -R dist/ release/dist/
     - name: Push changes to the branch
-      uses: JamesIves/github-pages-deploy-action@v4.3.2
+      uses: JamesIves/github-pages-deploy-action@v4.4.1
       with:
         branch: release
         folder: release
