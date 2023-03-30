@@ -1,25 +1,8 @@
-import * as core from '@actions/core';
+import { TestType } from './tests';
+import { Discovery } from './discovery';
+import { Config, RequestExclusion, validateConfig } from './config';
 import { HttpClient } from '@actions/http-client';
-
-interface RequestExclusion {
-  patterns: string[];
-  methods: string[];
-}
-
-interface Exclusions {
-  params?: string[];
-  requests?: RequestExclusion[];
-}
-
-interface NewScan {
-  name: string;
-  discoveryTypes: string[];
-  exclusions?: Exclusions;
-  module?: string;
-  crawlerUrls?: string[];
-  fileId?: string;
-  hostsFilter?: string[];
-}
+import * as core from '@actions/core';
 
 interface Scan {
   id: string;
@@ -44,7 +27,8 @@ const fileId = core.getInput('file_id');
 const crawlerUrls = getArray('crawler_urls');
 const excludedParams = getArray('exclude_params');
 const excludedEntryPoints = getArray<RequestExclusion>('exclude_entry_points');
-const discoveryTypesIn = getArray('discovery_types');
+const tests = getArray<TestType>('tests');
+const discoveryTypesIn = getArray<Discovery>('discovery_types');
 const module_in = core.getInput('module');
 const hostsFilter = getArray('hosts_filter');
 const type = core.getInput('type');
@@ -81,11 +65,11 @@ const retest = async (uuid: string, scanName?: string) => {
   }
 };
 
-const create = async (scan: NewScan) => {
+const create = async (config: Config) => {
   try {
     const response = await client.postJson<Scan>(
       `${baseUrl}/api/v1/scans`,
-      scan
+      config
     );
 
     if (response.statusCode < 300 && response.result) {
@@ -110,7 +94,8 @@ if (restartScanID) {
       discoveryTypesIn ||
       module_in ||
       hostsFilter ||
-      type
+      type ||
+      tests
     )
   ) {
     retest(restartScanID, name);
@@ -122,19 +107,29 @@ if (restartScanID) {
 } else {
   const module = module_in || 'dast';
   const discoveryTypes = !discoveryTypesIn?.length
-    ? ['archive']
+    ? [Discovery.ARCHIVE]
     : discoveryTypesIn;
-
-  create({
+  const uniqueTests = tests ? [...new Set(tests)] : undefined;
+  const config: Config = {
     name,
     discoveryTypes,
     module,
     crawlerUrls,
     fileId,
     hostsFilter,
+    tests: uniqueTests,
     exclusions: {
       requests: excludedEntryPoints,
       params: excludedParams
     }
-  });
+  };
+
+  try {
+    validateConfig(config);
+  } catch (e: any) {
+    core.setFailed(e.message);
+    throw e;
+  }
+
+  create(config);
 }
