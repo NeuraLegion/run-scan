@@ -38,6 +38,9 @@ inputs:
     description: 'Scan Name'
     default: 'GitHub Scan'
     required: false
+  tests:
+    description: 'A list of tests which you want to run during a scan.'
+    required: false
 
 outputs:
   url:
