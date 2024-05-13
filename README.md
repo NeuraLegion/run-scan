@@ -135,7 +135,7 @@ _Recommended tests:_
 
 ### `file_id`
 
-**Required** if the discovery type is set to `archive` or `oas`. ID of a HAR-file or an OpenAPI schema you want to use for a scan. You can get the ID of an uploaded HAR-file or an OpenAPI schema in the **Storage** section on [app.neuralegion.com](https://app.brightsec.com/login).
+**Required** if the discovery type is set to `archive` or `oas`. ID of a HAR-file or an OpenAPI schema you want to use for a scan. You can get the ID of an uploaded HAR-file or an OpenAPI schema in the **Storage** section on [app.brightsec.com](https://app.brightsec.com/login).
 
 _Example:_
 
