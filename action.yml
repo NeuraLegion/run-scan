@@ -5,7 +5,7 @@ branding:
   color: 'blue'
 inputs:
   api_token:
-    description: 'Api Token. You can generate it in Organization section'
+    description: 'Api Token. You can generate it in Organization section of the Project settings'
     required: true
   restart_scan:
     description: 'Scan ID to restart'
