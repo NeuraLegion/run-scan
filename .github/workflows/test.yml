@@ -22,10 +22,10 @@ jobs:
         cp README.md release/
         cp action.yml release/
         cp -R dist/ release/dist/
-    - name: Start BNright Scan 🏁
+    - name: Start Bright Scan 🏁
       uses: ./release
       with:
-        api_token: ${{ secrets.NEXPLOIT_TOKEN }}
+        api_token: ${{ secrets.BRIGHT_TOKEN }}
         name: GitHub scan ${{ github.sha }}
         discovery_types: |
           [ "crawler" ]
