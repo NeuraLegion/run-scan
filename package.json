@@ -1,7 +1,7 @@
 {
   "name": "run-scan",
   "version": "0.1.0",
-  "description": "This action runs a new security scan in NeuraLegion, or reruns an existing one.",
+  "description": "This action runs a new security scan in Bright, or reruns an existing one.",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
