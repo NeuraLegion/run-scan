@@ -24,6 +24,7 @@ const apiToken = core.getInput('api_token', { required: true });
 const restartScanID = core.getInput('restart_scan');
 const name = core.getInput('name');
 const fileId = core.getInput('file_id');
+const projectId = core.getInput('project_id');
 const crawlerUrls = getArray('crawler_urls');
 const excludedParams = getArray('exclude_params');
 const excludedEntryPoints = getArray<RequestExclusion>('exclude_entry_points');
@@ -90,6 +91,7 @@ if (restartScanID) {
   if (
     !(
       fileId ||
+      projectId ||
       crawlerUrls ||
       discoveryTypesIn ||
       module_in ||
@@ -116,6 +118,7 @@ if (restartScanID) {
     module,
     ...(crawlerUrls ? { crawlerUrls } : {}),
     ...(fileId ? { fileId } : {}),
+    ...(projectId ? { projectId } : {}),
     ...(uniqueTests?.length ? { tests: uniqueTests } : {}),
     ...(hostsFilter?.length ? { hostsFilter } : {}),
     ...(excludedEntryPoints?.length || excludedParams?.length
