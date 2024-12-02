@@ -52,6 +52,12 @@ _Example:_ `name: GitHub scan ${{ github.sha }}`
 
 _Example:_ `api_token: ${{ secrets.NEURALEGION_TOKEN }}`
 
+### `project_id`
+
+Provide project-id if you want to run a scan for a specific project. If you don't provide project-id, scan will run under Default project.
+
+_Example:_ `project_id: gBAh2n9BD9ps7FVQXbLWXv`
+
 ### `restart_scan`
 
 **Required** when restarting an existing scan by its ID. You can get the scan ID in the Scans section in [the Bright app](https://app.neuralegion.com/login).
