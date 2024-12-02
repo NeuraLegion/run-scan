@@ -13,6 +13,9 @@ inputs:
   hostname:
     description: 'Hostname. Default is app.neuralegion.com'
     required: false
+  project_id:
+    description: 'Project ID for Scan'
+    required: false
   file_id:
     description: 'HAR-file ID'
     required: false
