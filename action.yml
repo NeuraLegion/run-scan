@@ -1,11 +1,11 @@
-name: 'Run a NeuraLegion Scan'
-description: 'Run a NeuraLegion scan right in GitHub Action'
+name: 'Run a Bright Scan'
+description: 'Run a Bright scan right in GitHub Action'
 branding:
   icon: 'upload-cloud'
   color: 'blue'
 inputs:
   api_token:
-    description: 'Api Token. You can generate it in Organization section'
+    description: 'Api Token. You can generate it in Organization section of the Project settings'
     required: true
   restart_scan:
     description: 'Scan ID to restart'
