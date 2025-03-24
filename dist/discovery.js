@@ -5,9 +5,10 @@ var Discovery;
 (function (Discovery) {
     Discovery["ARCHIVE"] = "archive";
     Discovery["CRAWLER"] = "crawler";
+    Discovery["GRAPHQL"] = "graphql";
     Discovery["OAS"] = "oas";
 })(Discovery = exports.Discovery || (exports.Discovery = {}));
-const validateDiscovery = (discoveryTypes) => {
+const validateDiscovery = (discoveryTypes = []) => {
     if (discoveryTypes.some((x) => !isValidDiscovery(x))) {
         throw new Error('Unknown discovery type supplied.');
     }
@@ -27,7 +28,7 @@ const disallowDiscoveryCombination = (discoveryTypes) => {
     ]);
     if (disallowedCombinations.length) {
         const [firstInvalidCombination] = disallowedCombinations;
-        throw new Error(`The discovery list cannot include both ${firstInvalidCombination === null || firstInvalidCombination === void 0 ? void 0 : firstInvalidCombination[0]} and any of ${firstInvalidCombination === null || firstInvalidCombination === void 0 ? void 0 : firstInvalidCombination[1].join(', ')} simultaneously.`);
+        throw new Error(`The discovery list cannot include both ${firstInvalidCombination[0]} and any of ${firstInvalidCombination[1].join(', ')} simultaneously.`);
     }
 };
 const disallowedDiscoveryCombinations = new Map([

@@ -28,7 +28,7 @@ const isValidUrl = (url) => {
     }
 };
 exports.isValidUrl = isValidUrl;
-function validateCrawlerUrls(crawlerUrls, discoveryTypes) {
+function validateCrawlerUrls(crawlerUrls, discoveryTypes = []) {
     if (crawlerUrls) {
         if (!discoveryTypes.includes(discovery_1.Discovery.CRAWLER)) {
             throw new Error(`Invalid discovery. When specifying a crawler URLs, the discovery type must be "crawler". The current discovery types are: ${discoveryTypes.join(', ')}`);
@@ -43,24 +43,29 @@ function validateCrawlerUrls(crawlerUrls, discoveryTypes) {
         }
     }
 }
-function validateFileId(fileId, discoveryTypes) {
+function validateFileId(fileId, discoveryTypes = []) {
     if (fileId) {
         if (!(discoveryTypes.includes(discovery_1.Discovery.OAS) ||
-            discoveryTypes.includes(discovery_1.Discovery.ARCHIVE))) {
-            throw new Error(`Invalid discovery. When specifying a file ID, the discovery type must be either "oas" or "archive". The current discovery types are: ${discoveryTypes.join(', ')}`);
+            discoveryTypes.includes(discovery_1.Discovery.ARCHIVE) ||
+            discoveryTypes.includes(discovery_1.Discovery.GRAPHQL))) {
+            throw new Error(`Invalid discovery. When specifying a file ID, the discovery type must be either "oas" or "archive" or "graphql". The current discovery types are: ${discoveryTypes.join(', ')}`);
         }
     }
     else {
         if (discoveryTypes.includes(discovery_1.Discovery.OAS) ||
-            discoveryTypes.includes(discovery_1.Discovery.ARCHIVE)) {
-            throw new Error(`Invalid discovery. When setting a discovery type to either "oas" or "archive", the file ID must be provided.`);
+            discoveryTypes.includes(discovery_1.Discovery.ARCHIVE) ||
+            discoveryTypes.includes(discovery_1.Discovery.GRAPHQL)) {
+            throw new Error(`Invalid discovery. When setting a discovery type to either "oas" or "archive" or "graphql", the file ID must be provided.`);
         }
     }
 }
-const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests }) => {
-    (0, discovery_1.validateDiscovery)(discoveryTypes);
-    validateFileId(fileId, discoveryTypes);
-    validateCrawlerUrls(crawlerUrls, discoveryTypes);
+const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds }) => {
+    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length)) {
+        // validate discovery only if no entry point IDs are provided
+        (0, discovery_1.validateDiscovery)(discoveryTypes || []);
+    }
+    validateFileId(fileId, discoveryTypes || []);
+    validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
     if (tests) {
         (0, tests_1.validateTests)(tests);
     }
