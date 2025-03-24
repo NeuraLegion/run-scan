@@ -1,5 +1,5 @@
-name: 'Run a NeuraLegion Scan'
-description: 'Run a NeuraLegion scan right in GitHub Action'
+name: 'Run a Bright Security Scan'
+description: 'Run a Bright Security scan right in GitHub Action'
 branding:
   icon: 'upload-cloud'
   color: 'blue'
@@ -11,7 +11,7 @@ inputs:
     description: 'Scan ID to restart'
     required: false
   hostname:
-    description: 'Hostname. Default is app.neuralegion.com'
+    description: 'Hostname. Default is app.brightsec.com'
     required: false
   project_id:
     description: 'Project ID for Scan'
@@ -20,7 +20,7 @@ inputs:
     description: 'HAR-file ID'
     required: false
   discovery_types:
-    description: 'Array of discovery types. Can be: archive, crawler, oas'
+    description: 'Array of discovery types. Possible values: archive, crawler, oas, graphql'
     required: false
   crawler_urls:
     description: 'Crawler URLs'
@@ -44,6 +44,9 @@ inputs:
   tests:
     description: 'A list of tests which you want to run during a scan.'
     required: false
+  entrypoints:
+    description: 'A list of entrypoints which you want to scan.'
+    required: false
 
 outputs:
   url:
@@ -51,5 +54,5 @@ outputs:
   id:
     description: 'Scan ID'
 runs:
-  using: 'node12'
+  using: 'node20'
   main: 'dist/index.js'
