@@ -1,7 +1,6 @@
-import { URL } from 'url';
-
 import { Discovery, validateDiscovery } from './discovery';
 import { TestType, validateTests } from './tests';
+import { URL } from 'url';
 
 export interface RequestExclusion {
   patterns?: string[];
@@ -114,7 +113,8 @@ export const validateConfig = ({
   tests,
   entryPointIds
 }: Config) => {
-  if (!entryPointIds?.length) { // validate discovery only if no entry point IDs are provided
+  if (!entryPointIds?.length) {
+    // validate discovery only if no entry point IDs are provided
     validateDiscovery(discoveryTypes || []);
   }
 

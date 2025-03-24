@@ -1,9 +1,8 @@
-import * as core from '@actions/core';
-import { HttpClient } from '@actions/http-client';
-
 import { Config, RequestExclusion, validateConfig } from './config';
 import { Discovery } from './discovery';
 import { TestType } from './tests';
+import * as core from '@actions/core';
+import { HttpClient } from '@actions/http-client';
 
 interface Scan {
   id: string;
