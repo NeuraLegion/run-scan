@@ -19,6 +19,8 @@ export interface Config {
   module?: string;
   crawlerUrls?: string[];
   fileId?: string;
+  authObjectId?: string;
+  repeaters?: string[];
   projectId?: string;
   hostsFilter?: string[];
   tests?: TestType[];

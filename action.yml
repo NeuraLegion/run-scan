@@ -19,6 +19,12 @@ inputs:
   file_id:
     description: 'HAR-file ID'
     required: false
+  auth_object_id:
+    description: 'Auth object ID'
+    required: false
+  repeaters:
+    description: 'IDs of repeaters needed for the scan'
+    required: false
   discovery_types:
     description: 'Array of discovery types. Possible values: archive, crawler, oas, graphql'
     required: false
