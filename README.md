@@ -109,6 +109,23 @@ FILE_ID=$(nexploit-cli archive:upload   \
 ./example.har)
 ```
 
+### `auth_object_id`
+
+ID of auth-object to be used by the scan.
+
+_Example:_ `auth_object_id: 7NSbwLjh7Fhd8mPy1DM7Bk`
+
+### `repeaters`
+
+List of repeater ids to be used by the scan.
+
+_Example:_
+
+```yaml
+repeaters: |
+  ['m5Y42fYm2CRCVdZh83w5af']
+```
+
 ### `crawler_urls`
 
 **Required** if the discovery type is set to `crawler`. Target URLs to be used by the crawler to define the attack surface.
