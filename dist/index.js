@@ -183,6 +183,8 @@ const apiToken = core.getInput('api_token', { required: true });
 const restartScanID = core.getInput('restart_scan');
 const name = core.getInput('name');
 const fileId = core.getInput('file_id');
+const authObjectId = core.getInput('auth_object_id');
+const repeaters = getArray('repeaters');
 const projectId = core.getInput('project_id');
 const crawlerUrls = getArray('crawler_urls');
 const excludedParams = getArray('exclude_params');
@@ -236,6 +238,8 @@ const create = (config) => __awaiter(void 0, void 0, void 0, function* () {
 });
 if (restartScanID) {
     if (!(fileId ||
+        authObjectId ||
+        repeaters ||
         projectId ||
         crawlerUrls ||
         discoveryTypesIn ||
@@ -255,9 +259,9 @@ else {
         ? [discovery_1.Discovery.ARCHIVE]
         : discoveryTypesIn;
     const uniqueTests = tests ? [...new Set(tests)] : undefined;
-    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name,
+    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name,
         discoveryTypes,
-        module, entryPointIds: entrypoints }, (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
+        module, entryPointIds: entrypoints }, (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
         ? {
             exclusions: {
                 requests: excludedEntryPoints,
