@@ -118,11 +118,9 @@ export const validateConfig = ({
   if (!entryPointIds?.length) {
     // validate discovery only if no entry point IDs are provided
     validateDiscovery(discoveryTypes || []);
+    validateFileId(fileId, discoveryTypes || []);
+    validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
   }
-
-  validateFileId(fileId, discoveryTypes || []);
-
-  validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
 
   if (tests) {
     validateTests(tests);
