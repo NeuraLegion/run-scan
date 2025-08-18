@@ -70,9 +70,9 @@ const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPoint
     if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length)) {
         // validate discovery only if no entry point IDs are provided
         (0, discovery_1.validateDiscovery)(discoveryTypes || []);
+        validateFileId(fileId, discoveryTypes || []);
+        validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
     }
-    validateFileId(fileId, discoveryTypes || []);
-    validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
     if (tests) {
         (0, tests_1.validateTests)(tests);
     }
@@ -255,13 +255,13 @@ if (restartScanID) {
 }
 else {
     const module = module_in || 'dast';
-    const discoveryTypes = !(discoveryTypesIn === null || discoveryTypesIn === void 0 ? void 0 : discoveryTypesIn.length)
-        ? [discovery_1.Discovery.ARCHIVE]
-        : discoveryTypesIn;
+    // Skip default discovery type when entrypoints exist
+    let discoveryTypes = discoveryTypesIn;
+    if (!(entrypoints === null || entrypoints === void 0 ? void 0 : entrypoints.length) && !(discoveryTypesIn === null || discoveryTypesIn === void 0 ? void 0 : discoveryTypesIn.length)) {
+        discoveryTypes = [discovery_1.Discovery.ARCHIVE];
+    }
     const uniqueTests = tests ? [...new Set(tests)] : undefined;
-    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name,
-        discoveryTypes,
-        module, entryPointIds: entrypoints }, (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
+    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
         ? {
             exclusions: {
                 requests: excludedEntryPoints,

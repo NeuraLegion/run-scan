@@ -63,9 +63,9 @@ const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPoint
     if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length)) {
         // validate discovery only if no entry point IDs are provided
         (0, discovery_1.validateDiscovery)(discoveryTypes || []);
+        validateFileId(fileId, discoveryTypes || []);
+        validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
     }
-    validateFileId(fileId, discoveryTypes || []);
-    validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
     if (tests) {
         (0, tests_1.validateTests)(tests);
     }
