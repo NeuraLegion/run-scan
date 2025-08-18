@@ -111,14 +111,16 @@ if (restartScanID) {
   }
 } else {
   const module = module_in || 'dast';
-  const discoveryTypes = !discoveryTypesIn?.length
-    ? [Discovery.ARCHIVE]
-    : discoveryTypesIn;
+  // Skip default discovery type when entrypoints exist
+  let discoveryTypes = discoveryTypesIn;
+  if (!entrypoints?.length && !discoveryTypesIn?.length) {
+    discoveryTypes = [Discovery.ARCHIVE];
+  }
   const uniqueTests = tests ? [...new Set(tests)] : undefined;
 
   const config: Config = {
     name,
-    discoveryTypes,
+    ...(discoveryTypes ? { discoveryTypes } : {}),
     module,
     entryPointIds: entrypoints,
     ...(crawlerUrls ? { crawlerUrls } : {}),

@@ -68,7 +68,8 @@ _Example:_ `restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ)`
 
 ### `discovery_types`
 
-**Required**. Array of discovery types. The following types are available:
+Array of discovery types. Required unless entrypoints are provided.
+The following types are available:
 
 - `archive` - uses an uploaded HAR-file for a scan
 - `crawler` - uses a crawler to define the attack surface for a scan
@@ -211,7 +212,7 @@ ID of the created scan. This ID could then be used to restart the scan, or for t
 steps:
   - name: Bright Security Scan
     id: start
-    uses: NeuraLegion/bright-github-actions/run-scan@release
+    uses: NeuraLegion/run-scan@release
     with:
       api_token: ${{ secrets.BRIGHT_TOKEN }}
       name: GitHub scan ${{ github.sha }}
@@ -230,7 +231,7 @@ steps:
 steps:
   - name: Bright Security Scan
     id: start
-    uses: NeuraLegion/bright-github-actions/run-scan@release
+    uses: NeuraLegion/run-scan@release
     with:
       api_token: ${{ secrets.BRIGHT_TOKEN }}
       name: GitHub scan ${{ github.sha }}
