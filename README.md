@@ -95,7 +95,7 @@ tests: |
   [ "common_files", "id_enumeration" ]
 ```
 
-Please see the attached [vulnerability guide](https://docs.brightsec.com/docs/vulnerability-guide) for a full and updated list of available tests.
+Please see the attached [vulnerability guide](https://docs.brightsec.com/docs/vulnerabilities-index) for a full and updated list of available tests.
 
 ### `file_id`
 
@@ -104,7 +104,7 @@ Please see the attached [vulnerability guide](https://docs.brightsec.com/docs/vu
 _Example:_
 
 ```
-FILE_ID=$(nexploit-cli archive:upload   \
+FILE_ID=$(bright-cli archive:upload   \
 --token ${{ secrets.BRIGHT_TOKEN }}   \
 --discard true                          \
 ./example.har)
@@ -140,7 +140,7 @@ crawler_urls: |
 
 ### `hosts_filter`
 
-**Required** when the the discovery type is set to `archive`. Allows selecting specific hosts for a scan.
+**Required** when the discovery type is set to `archive`. Allows selecting specific hosts for a scan.
 
 ### `exclude_params`
 
@@ -201,8 +201,8 @@ Url of the resulting scan
 
 ID of the created scan. This ID could then be used to restart the scan, or for the following GitHub actions:
 
-- [Bright Wait for Issues](https://github.com/marketplace/actions/nexploit-wait-for-issues)
-- [Bright Stop Scan](https://github.com/marketplace/actions/nexploit-stop-scan)
+- [Bright Wait for Issues](https://github.com/marketplace/actions/bright-wait-for-issues)
+- [Bright Stop Scan](https://github.com/marketplace/actions/bright-stop-scan)
 
 ## Example usage
 
