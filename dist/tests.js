@@ -27,54 +27,54 @@ exports.validateTests = exports.hasExclusiveTests = exports.hasExpensiveTests = 
 const core = __importStar(require("@actions/core"));
 var TestType;
 (function (TestType) {
-    TestType["ANGULAR_CSTI"] = "angular_csti";
-    TestType["BACKUP_LOCATIONS"] = "backup_locations";
+    TestType["DOM_XSS"] = "dom_xss";
+    TestType["AMAZON_S3_TAKEOVER"] = "amazon_s3_takeover";
+    TestType["BROKEN_OBJECT_PROPERTY_AUTHORIZATION"] = "bopla";
+    TestType["BROKEN_ACCESS_CONTROL"] = "broken_access_control";
     TestType["BROKEN_SAML_AUTH"] = "broken_saml_auth";
     TestType["BRUTE_FORCE_LOGIN"] = "brute_force_login";
     TestType["BUSINESS_CONSTRAINT_BYPASS"] = "business_constraint_bypass";
     TestType["COMMON_FILES"] = "common_files";
     TestType["COOKIE_SECURITY"] = "cookie_security";
     TestType["CSRF"] = "csrf";
+    TestType["CSS_INJECTION"] = "css_injection";
     TestType["CVE"] = "cve_test";
     TestType["DATE_MANIPULATION"] = "date_manipulation";
     TestType["DEFAULT_LOGIN_LOCATION"] = "default_login_location";
     TestType["DIRECTORY_LISTING"] = "directory_listing";
-    TestType["DOM_XSS"] = "dom_xss";
     TestType["EMAIL_INJECTION"] = "email_injection";
     TestType["EXCESSIVE_DATA_EXPOSURE"] = "excessive_data_exposure";
-    TestType["EXPOSED_COUCH_DB_APIS"] = "exposed_couch_db_apis";
     TestType["FILE_UPLOAD"] = "file_upload";
     TestType["FULL_PATH_DISCLOSURE"] = "full_path_disclosure";
     TestType["GRAPHQL_INTROSPECTION"] = "graphql_introspection";
     TestType["HEADER_SECURITY"] = "header_security";
-    TestType["HRS"] = "hrs";
     TestType["HTML_INJECTION"] = "html_injection";
     TestType["HTTP_METHOD_FUZZING"] = "http_method_fuzzing";
-    TestType["HTTP_RESPONSE_SPLITTING"] = "http_response_splitting";
     TestType["ID_ENUMERATION"] = "id_enumeration";
+    TestType["IFRAME_INJECTION"] = "iframe_injection";
     TestType["IMPROPER_ASSET_MANAGEMENT"] = "improper_asset_management";
+    TestType["INSECURE_OUPUT_HANDLING"] = "insecure_output_handling";
     TestType["INSECURE_TLS_CONFIGURATION"] = "insecure_tls_configuration";
     TestType["JWT"] = "jwt";
     TestType["LDAPI"] = "ldapi";
     TestType["LFI"] = "lfi";
     TestType["LRRL"] = "lrrl";
-    TestType["MASS_ASSIGNMENT"] = "mass_assignment";
     TestType["NOSQL"] = "nosql";
-    TestType["OPEN_BUCKETS"] = "open_buckets";
+    TestType["OPEN_CLOUD_STORAGE"] = "open_cloud_storage";
     TestType["OPEN_DATABASE"] = "open_database";
     TestType["OSI"] = "osi";
+    TestType["PROMPT_INJECTION"] = "prompt_injection";
     TestType["PROTO_POLLUTION"] = "proto_pollution";
     TestType["RETIRE_JS"] = "retire_js";
     TestType["RFI"] = "rfi";
-    TestType["S3_TAKEOVER"] = "amazon_s3_takeover";
     TestType["SECRET_TOKENS"] = "secret_tokens";
     TestType["SERVER_SIDE_JS_INJECTION"] = "server_side_js_injection";
     TestType["SQLI"] = "sqli";
     TestType["SSRF"] = "ssrf";
     TestType["SSTI"] = "ssti";
+    TestType["STORED_XSS"] = "stored_xss";
     TestType["UNVALIDATED_REDIRECT"] = "unvalidated_redirect";
     TestType["VERSION_CONTROL_SYSTEMS"] = "version_control_systems";
-    TestType["WEBDAV"] = "webdav";
     TestType["WORDPRESS"] = "wordpress";
     TestType["XPATHI"] = "xpathi";
     TestType["XSS"] = "xss";
@@ -87,14 +87,7 @@ exports.expensiveTests = [
     TestType.EXCESSIVE_DATA_EXPOSURE,
     TestType.ID_ENUMERATION,
     TestType.LRRL,
-    TestType.MASS_ASSIGNMENT,
-    TestType.RETIRE_JS,
-    // not implemented yet by the engine
-    TestType.ANGULAR_CSTI,
-    TestType.BACKUP_LOCATIONS,
-    TestType.EXPOSED_COUCH_DB_APIS,
-    TestType.HTTP_RESPONSE_SPLITTING,
-    TestType.HRS
+    TestType.RETIRE_JS
 ];
 exports.exclusiveTests = [TestType.LRRL];
 const isValidTest = (test) => Object.values(TestType).includes(test);
