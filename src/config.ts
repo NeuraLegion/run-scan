@@ -1,4 +1,5 @@
 import { Discovery, validateDiscovery } from './discovery';
+import { EntryPointStatus, validateEntryPointsStatuses } from './entrypoints';
 import { TestType, validateTests } from './tests';
 import { URL } from 'url';
 
@@ -25,6 +26,7 @@ export interface Config {
   hostsFilter?: string[];
   tests?: TestType[];
   entryPointIds?: string[];
+  entryPointsStatuses?: EntryPointStatus[];
 }
 
 const invalidUrlProtocols: ReadonlySet<string> = new Set<string>([
@@ -113,13 +115,18 @@ export const validateConfig = ({
   crawlerUrls,
   discoveryTypes,
   tests,
-  entryPointIds
+  entryPointIds,
+  entryPointsStatuses
 }: Config) => {
-  if (!entryPointIds?.length) {
-    // validate discovery only if no entry point IDs are provided
+  if (!entryPointIds?.length && !entryPointsStatuses?.length) {
+    // validate discovery only if no entry point IDs or statuses are provided
     validateDiscovery(discoveryTypes || []);
     validateFileId(fileId, discoveryTypes || []);
     validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+  }
+
+  if (entryPointsStatuses?.length) {
+    validateEntryPointsStatuses(entryPointsStatuses);
   }
 
   if (tests) {

@@ -1,5 +1,6 @@
 import { Config, RequestExclusion, validateConfig } from './config';
 import { Discovery } from './discovery';
+import { EntryPointStatus } from './entrypoints';
 import { TestType } from './tests';
 import * as core from '@actions/core';
 import { HttpClient } from '@actions/http-client';
@@ -37,6 +38,7 @@ const hostsFilter = getArray('hosts_filter');
 const type = core.getInput('type');
 const hostname = core.getInput('hostname');
 const entrypoints = getArray('entrypoints');
+const entryPointsStatuses = getArray<EntryPointStatus>('entrypoints_statuses');
 
 const baseUrl = hostname ? `https://${hostname}` : 'https://app.brightsec.com';
 
@@ -100,7 +102,8 @@ if (restartScanID) {
       module_in ||
       hostsFilter ||
       type ||
-      tests
+      tests ||
+      entryPointsStatuses
     )
   ) {
     retest(restartScanID, name);
@@ -111,9 +114,13 @@ if (restartScanID) {
   }
 } else {
   const module = module_in || 'dast';
-  // Skip default discovery type when entrypoints exist
+  // Skip default discovery type when entrypoints or statuses exist
   let discoveryTypes = discoveryTypesIn;
-  if (!entrypoints?.length && !discoveryTypesIn?.length) {
+  if (
+    !entrypoints?.length &&
+    !entryPointsStatuses?.length &&
+    !discoveryTypesIn?.length
+  ) {
     discoveryTypes = [Discovery.ARCHIVE];
   }
   const uniqueTests = tests ? [...new Set(tests)] : undefined;
@@ -137,7 +144,8 @@ if (restartScanID) {
             params: excludedParams
           }
         }
-      : {})
+      : {}),
+    ...(entryPointsStatuses?.length ? { entryPointsStatuses } : {})
   };
 
   try {

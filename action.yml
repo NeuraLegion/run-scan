@@ -53,6 +53,9 @@ inputs:
   entrypoints:
     description: 'A list of entrypoints which you want to scan.'
     required: false
+  entrypoints_statuses:
+    description: 'A list of entrypoint statuses to auto-select from a project. Possible values: new, changed, tested, vulnerable'
+    required: false
 
 outputs:
   url:
