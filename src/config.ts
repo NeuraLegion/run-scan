@@ -116,7 +116,8 @@ export const validateConfig = ({
   discoveryTypes,
   tests,
   entryPointIds,
-  entryPointsStatuses
+  entryPointsStatuses,
+  projectId
 }: Config) => {
   if (!entryPointIds?.length && !entryPointsStatuses?.length) {
     // validate discovery only if no entry point IDs or statuses are provided
@@ -126,6 +127,12 @@ export const validateConfig = ({
   }
 
   if (entryPointsStatuses?.length) {
+    if (!projectId) {
+      throw new Error(
+        'The "project_id" must be provided when using "entrypoints_statuses".'
+      );
+    }
+
     validateEntryPointsStatuses(entryPointsStatuses);
   }
 
