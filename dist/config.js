@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateConfig = exports.isValidUrl = void 0;
 const discovery_1 = require("./discovery");
+const entrypoints_1 = require("./entrypoints");
 const tests_1 = require("./tests");
 const url_1 = require("url");
 const invalidUrlProtocols = new Set([
@@ -59,12 +60,18 @@ function validateFileId(fileId, discoveryTypes = []) {
         }
     }
 }
-const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds }) => {
-    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length)) {
-        // validate discovery only if no entry point IDs are provided
+const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds, entryPointsStatuses, projectId }) => {
+    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) && !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length)) {
+        // validate discovery only if no entry point IDs or statuses are provided
         (0, discovery_1.validateDiscovery)(discoveryTypes || []);
         validateFileId(fileId, discoveryTypes || []);
         validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+    }
+    if (entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) {
+        if (!projectId) {
+            throw new Error('The "project_id" must be provided when using "entrypoints_statuses".');
+        }
+        (0, entrypoints_1.validateEntryPointsStatuses)(entryPointsStatuses);
     }
     if (tests) {
         (0, tests_1.validateTests)(tests);

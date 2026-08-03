@@ -164,6 +164,26 @@ entrypoints: |
   [ "550e8400-e29b-41d4-a716-446655440000", "7c9e6679-7425-40de-944b-e07fc1f90ae7" ]
 ```
 
+### `entrypoints_statuses`
+
+A list of entrypoint statuses to auto-select entrypoints from a project. When provided, discovery configuration is not required.
+
+Available statuses:
+
+- `new` - entrypoints that have not been tested yet
+- `changed` - entrypoints that have been modified since the last scan
+- `tested` - entrypoints that have already been tested
+- `vulnerable` - entrypoints that have known vulnerabilities
+
+Requires `project_id` to be set.
+
+_Example:_
+
+```yaml
+entrypoints_statuses: |
+  [ "new", "changed" ]
+```
+
 ### `exclude_entry_points`
 
 A list of JSON strings that contain patterns for entry points you would like to ignore during the tests.
@@ -236,6 +256,23 @@ steps:
       api_token: ${{ secrets.BRIGHT_TOKEN }}
       name: GitHub scan ${{ github.sha }}
       restart_scan: ai3LG8DmVn9Rn1YeqCNRGQ
+  - name: Get the output scan url
+    run: echo "The scan was started on ${{ steps.start.outputs.url }}"
+```
+
+#### Start a scan with entrypoints auto-selected by status
+
+```yaml
+steps:
+  - name: Bright Security Scan
+    id: start
+    uses: NeuraLegion/run-scan@release
+    with:
+      api_token: ${{ secrets.BRIGHT_TOKEN }}
+      name: GitHub scan ${{ github.sha }}
+      project_id: gBAh2n9BD9ps7FVQXbLWXv
+      entrypoints_statuses: |
+        [ "new", "changed" ]
   - name: Get the output scan url
     run: echo "The scan was started on ${{ steps.start.outputs.url }}"
 ```

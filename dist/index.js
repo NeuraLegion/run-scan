@@ -9,6 +9,7 @@
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateConfig = exports.isValidUrl = void 0;
 const discovery_1 = __nccwpck_require__(180);
+const entrypoints_1 = __nccwpck_require__(386);
 const tests_1 = __nccwpck_require__(819);
 const url_1 = __nccwpck_require__(310);
 const invalidUrlProtocols = new Set([
@@ -66,12 +67,18 @@ function validateFileId(fileId, discoveryTypes = []) {
         }
     }
 }
-const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds }) => {
-    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length)) {
-        // validate discovery only if no entry point IDs are provided
+const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds, entryPointsStatuses, projectId }) => {
+    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) && !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length)) {
+        // validate discovery only if no entry point IDs or statuses are provided
         (0, discovery_1.validateDiscovery)(discoveryTypes || []);
         validateFileId(fileId, discoveryTypes || []);
         validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+    }
+    if (entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) {
+        if (!projectId) {
+            throw new Error('The "project_id" must be provided when using "entrypoints_statuses".');
+        }
+        (0, entrypoints_1.validateEntryPointsStatuses)(entryPointsStatuses);
     }
     if (tests) {
         (0, tests_1.validateTests)(tests);
@@ -123,6 +130,36 @@ const disallowedDiscoveryCombinations = new Map([
     [Discovery.OAS, [Discovery.CRAWLER, Discovery.ARCHIVE]]
 ]);
 const getDisallowedDiscoveryCombination = (discoveryTypes) => [...disallowedDiscoveryCombinations].filter(([x]) => discoveryTypes.includes(x));
+
+
+/***/ }),
+
+/***/ 386:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateEntryPointsStatuses = exports.EntryPointStatus = void 0;
+var EntryPointStatus;
+(function (EntryPointStatus) {
+    EntryPointStatus["NEW"] = "new";
+    EntryPointStatus["CHANGED"] = "changed";
+    EntryPointStatus["TESTED"] = "tested";
+    EntryPointStatus["VULNERABLE"] = "vulnerable";
+})(EntryPointStatus = exports.EntryPointStatus || (exports.EntryPointStatus = {}));
+const isValidStatus = (status) => Object.values(EntryPointStatus).includes(status);
+const validateEntryPointsStatuses = (statuses) => {
+    const invalidStatuses = statuses.filter(x => !isValidStatus(x));
+    if (invalidStatuses.length) {
+        throw new Error(`Invalid entrypoints_statuses value(s): ${invalidStatuses.join(', ')}. Valid values are: ${Object.values(EntryPointStatus).join(', ')}`);
+    }
+    const uniqueStatuses = new Set(statuses);
+    if (uniqueStatuses.size !== statuses.length) {
+        throw new Error('Entrypoint statuses contain duplicate values.');
+    }
+};
+exports.validateEntryPointsStatuses = validateEntryPointsStatuses;
 
 
 /***/ }),
@@ -196,6 +233,7 @@ const hostsFilter = getArray('hosts_filter');
 const type = core.getInput('type');
 const hostname = core.getInput('hostname');
 const entrypoints = getArray('entrypoints');
+const entryPointsStatuses = getArray('entrypoints_statuses');
 const baseUrl = hostname ? `https://${hostname}` : 'https://app.brightsec.com';
 const client = new http_client_1.HttpClient('GitHub Actions', [], {
     allowRetries: true,
@@ -246,7 +284,8 @@ if (restartScanID) {
         module_in ||
         hostsFilter ||
         type ||
-        tests)) {
+        tests ||
+        entryPointsStatuses)) {
         retest(restartScanID, name);
     }
     else {
@@ -255,20 +294,22 @@ if (restartScanID) {
 }
 else {
     const module = module_in || 'dast';
-    // Skip default discovery type when entrypoints exist
+    // Skip default discovery type when entrypoints or statuses exist
     let discoveryTypes = discoveryTypesIn;
-    if (!(entrypoints === null || entrypoints === void 0 ? void 0 : entrypoints.length) && !(discoveryTypesIn === null || discoveryTypesIn === void 0 ? void 0 : discoveryTypesIn.length)) {
+    if (!(entrypoints === null || entrypoints === void 0 ? void 0 : entrypoints.length) &&
+        !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) &&
+        !(discoveryTypesIn === null || discoveryTypesIn === void 0 ? void 0 : discoveryTypesIn.length)) {
         discoveryTypes = [discovery_1.Discovery.ARCHIVE];
     }
     const uniqueTests = tests ? [...new Set(tests)] : undefined;
-    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
+    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
         ? {
             exclusions: {
                 requests: excludedEntryPoints,
                 params: excludedParams
             }
         }
-        : {}));
+        : {})), ((entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) ? { entryPointsStatuses } : {}));
     try {
         (0, config_1.validateConfig)(config);
     }
