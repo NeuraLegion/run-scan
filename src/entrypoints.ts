@@ -15,11 +15,9 @@ export const validateEntryPointsStatuses = (
 
   if (invalidStatuses.length) {
     throw new Error(
-      `${invalidStatuses.join(
+      `Invalid entrypoints_statuses value(s): ${invalidStatuses.join(
         ', '
-      )} are invalid entrypoint statuses. Valid values are: ${Object.values(
-        EntryPointStatus
-      ).join(', ')}`
+      )}. Valid values are: ${Object.values(EntryPointStatus).join(', ')}`
     );
   }
 
