@@ -1,6 +1,6 @@
 import { Config, RequestExclusion, validateConfig } from './config';
 import { Discovery } from './discovery';
-import { EntryPointStatus } from './entrypoints';
+import { Connectivity, EntryPointStatus } from './entrypoints';
 import { TestType } from './tests';
 import * as core from '@actions/core';
 import { HttpClient } from '@actions/http-client';
@@ -39,6 +39,9 @@ const type = core.getInput('type');
 const hostname = core.getInput('hostname');
 const entrypoints = getArray('entrypoints');
 const entryPointsStatuses = getArray<EntryPointStatus>('entrypoints_statuses');
+const connectivityStatuses = getArray<Connectivity>(
+  'entrypoint_connectivity_statuses'
+);
 
 const baseUrl = hostname ? `https://${hostname}` : 'https://app.brightsec.com';
 
@@ -103,7 +106,8 @@ if (restartScanID) {
       hostsFilter ||
       type ||
       tests ||
-      entryPointsStatuses
+      entryPointsStatuses ||
+      connectivityStatuses
     )
   ) {
     retest(restartScanID, name);
@@ -119,6 +123,7 @@ if (restartScanID) {
   if (
     !entrypoints?.length &&
     !entryPointsStatuses?.length &&
+    !connectivityStatuses?.length &&
     !discoveryTypesIn?.length
   ) {
     discoveryTypes = [Discovery.ARCHIVE];
@@ -145,7 +150,15 @@ if (restartScanID) {
           }
         }
       : {}),
-    ...(entryPointsStatuses?.length ? { entryPointsStatuses } : {})
+    ...(entryPointsStatuses?.length ? { entryPointsStatuses } : {}),
+    ...(connectivityStatuses?.length
+      ? {
+          entryPointFilter: {
+            securityStatus: entryPointsStatuses || [],
+            connectivityStatus: connectivityStatuses
+          }
+        }
+      : {})
   };
 
   try {
