@@ -122,10 +122,20 @@ function validateFileId(
 }
 
 function validateEntryPointFilters(
+  entryPointIds: string[] | undefined,
   entryPointsStatuses: EntryPointStatus[] | undefined,
   entryPointFilter: EntryPointFilter | undefined,
   projectId: string | undefined
 ) {
+  if (
+    entryPointIds?.length &&
+    (entryPointsStatuses?.length || entryPointFilter)
+  ) {
+    throw new Error(
+      'The "entrypoints" and "entrypoints_statuses" are mutually exclusive and cannot be used together.'
+    );
+  }
+
   if (entryPointsStatuses?.length) {
     if (!projectId) {
       throw new Error(
@@ -178,7 +188,12 @@ export const validateConfig = ({
     validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
   }
 
-  validateEntryPointFilters(entryPointsStatuses, entryPointFilter, projectId);
+  validateEntryPointFilters(
+    entryPointIds,
+    entryPointsStatuses,
+    entryPointFilter,
+    projectId
+  );
 
   if (tests) {
     validateTests(tests);
