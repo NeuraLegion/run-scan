@@ -67,12 +67,11 @@ function validateFileId(fileId, discoveryTypes = []) {
         }
     }
 }
-const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds, entryPointsStatuses, projectId }) => {
-    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) && !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length)) {
-        // validate discovery only if no entry point IDs or statuses are provided
-        (0, discovery_1.validateDiscovery)(discoveryTypes || []);
-        validateFileId(fileId, discoveryTypes || []);
-        validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+function validateEntryPointFilters(entryPointIds, entryPointsStatuses, entryPointFilter, projectId) {
+    var _a, _b;
+    if ((entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) &&
+        ((entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) || entryPointFilter)) {
+        throw new Error('The "entrypoints" and "entrypoints_statuses" are mutually exclusive and cannot be used together.');
     }
     if (entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) {
         if (!projectId) {
@@ -80,6 +79,29 @@ const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPoint
         }
         (0, entrypoints_1.validateEntryPointsStatuses)(entryPointsStatuses);
     }
+    if (entryPointFilter) {
+        if (!projectId) {
+            throw new Error('The "project_id" must be provided when using "entrypoints_statuses" and "entrypoint_connectivity_statuses".');
+        }
+        if (!((_a = entryPointFilter.securityStatus) === null || _a === void 0 ? void 0 : _a.length)) {
+            throw new Error('The "entrypoints_statuses" must be provided when using "entrypoint_connectivity_statuses".');
+        }
+        (0, entrypoints_1.validateEntryPointsStatuses)(entryPointFilter.securityStatus);
+        if ((_b = entryPointFilter.connectivityStatus) === null || _b === void 0 ? void 0 : _b.length) {
+            (0, entrypoints_1.validateConnectivityStatuses)(entryPointFilter.connectivityStatus);
+        }
+    }
+}
+const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds, entryPointsStatuses, entryPointFilter, projectId }) => {
+    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) &&
+        !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) &&
+        !entryPointFilter) {
+        // validate discovery only if no entry point IDs or statuses are provided
+        (0, discovery_1.validateDiscovery)(discoveryTypes || []);
+        validateFileId(fileId, discoveryTypes || []);
+        validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+    }
+    validateEntryPointFilters(entryPointIds, entryPointsStatuses, entryPointFilter, projectId);
     if (tests) {
         (0, tests_1.validateTests)(tests);
     }
@@ -140,7 +162,7 @@ const getDisallowedDiscoveryCombination = (discoveryTypes) => [...disallowedDisc
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.validateEntryPointsStatuses = exports.EntryPointStatus = void 0;
+exports.validateConnectivityStatuses = exports.validateEntryPointsStatuses = exports.Connectivity = exports.EntryPointStatus = void 0;
 var EntryPointStatus;
 (function (EntryPointStatus) {
     EntryPointStatus["NEW"] = "new";
@@ -148,7 +170,15 @@ var EntryPointStatus;
     EntryPointStatus["TESTED"] = "tested";
     EntryPointStatus["VULNERABLE"] = "vulnerable";
 })(EntryPointStatus = exports.EntryPointStatus || (exports.EntryPointStatus = {}));
+var Connectivity;
+(function (Connectivity) {
+    Connectivity["OK"] = "ok";
+    Connectivity["PROBLEM"] = "problem";
+    Connectivity["UNAUTHORIZED"] = "unauthorized";
+    Connectivity["UNREACHABLE"] = "unreachable";
+})(Connectivity = exports.Connectivity || (exports.Connectivity = {}));
 const isValidStatus = (status) => Object.values(EntryPointStatus).includes(status);
+const isValidConnectivity = (status) => Object.values(Connectivity).includes(status);
 const validateEntryPointsStatuses = (statuses) => {
     const invalidStatuses = statuses.filter(x => !isValidStatus(x));
     if (invalidStatuses.length) {
@@ -160,6 +190,17 @@ const validateEntryPointsStatuses = (statuses) => {
     }
 };
 exports.validateEntryPointsStatuses = validateEntryPointsStatuses;
+const validateConnectivityStatuses = (statuses) => {
+    const invalidStatuses = statuses.filter(x => !isValidConnectivity(x));
+    if (invalidStatuses.length) {
+        throw new Error(`Invalid entrypoint_connectivity_statuses value(s): ${invalidStatuses.join(', ')}. Valid values are: ${Object.values(Connectivity).join(', ')}`);
+    }
+    const uniqueStatuses = new Set(statuses);
+    if (uniqueStatuses.size !== statuses.length) {
+        throw new Error('Entrypoint connectivity statuses contain duplicate values.');
+    }
+};
+exports.validateConnectivityStatuses = validateConnectivityStatuses;
 
 
 /***/ }),
@@ -234,6 +275,7 @@ const type = core.getInput('type');
 const hostname = core.getInput('hostname');
 const entrypoints = getArray('entrypoints');
 const entryPointsStatuses = getArray('entrypoints_statuses');
+const connectivityStatuses = getArray('entrypoint_connectivity_statuses');
 const baseUrl = hostname ? `https://${hostname}` : 'https://app.brightsec.com';
 const client = new http_client_1.HttpClient('GitHub Actions', [], {
     allowRetries: true,
@@ -285,7 +327,8 @@ if (restartScanID) {
         hostsFilter ||
         type ||
         tests ||
-        entryPointsStatuses)) {
+        entryPointsStatuses ||
+        connectivityStatuses)) {
         retest(restartScanID, name);
     }
     else {
@@ -298,18 +341,26 @@ else {
     let discoveryTypes = discoveryTypesIn;
     if (!(entrypoints === null || entrypoints === void 0 ? void 0 : entrypoints.length) &&
         !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) &&
+        !(connectivityStatuses === null || connectivityStatuses === void 0 ? void 0 : connectivityStatuses.length) &&
         !(discoveryTypesIn === null || discoveryTypesIn === void 0 ? void 0 : discoveryTypesIn.length)) {
         discoveryTypes = [discovery_1.Discovery.ARCHIVE];
     }
     const uniqueTests = tests ? [...new Set(tests)] : undefined;
-    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
+    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
         ? {
             exclusions: {
                 requests: excludedEntryPoints,
                 params: excludedParams
             }
         }
-        : {})), ((entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) ? { entryPointsStatuses } : {}));
+        : {})), ((entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) ? { entryPointsStatuses } : {})), ((connectivityStatuses === null || connectivityStatuses === void 0 ? void 0 : connectivityStatuses.length)
+        ? {
+            entryPointFilter: {
+                securityStatus: entryPointsStatuses || [],
+                connectivityStatus: connectivityStatuses
+            }
+        }
+        : {}));
     try {
         (0, config_1.validateConfig)(config);
     }

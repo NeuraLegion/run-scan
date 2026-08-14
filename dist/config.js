@@ -60,12 +60,11 @@ function validateFileId(fileId, discoveryTypes = []) {
         }
     }
 }
-const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds, entryPointsStatuses, projectId }) => {
-    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) && !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length)) {
-        // validate discovery only if no entry point IDs or statuses are provided
-        (0, discovery_1.validateDiscovery)(discoveryTypes || []);
-        validateFileId(fileId, discoveryTypes || []);
-        validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+function validateEntryPointFilters(entryPointIds, entryPointsStatuses, entryPointFilter, projectId) {
+    var _a, _b;
+    if ((entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) &&
+        ((entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) || entryPointFilter)) {
+        throw new Error('The "entrypoints" and "entrypoints_statuses" are mutually exclusive and cannot be used together.');
     }
     if (entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) {
         if (!projectId) {
@@ -73,6 +72,29 @@ const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPoint
         }
         (0, entrypoints_1.validateEntryPointsStatuses)(entryPointsStatuses);
     }
+    if (entryPointFilter) {
+        if (!projectId) {
+            throw new Error('The "project_id" must be provided when using "entrypoints_statuses" and "entrypoint_connectivity_statuses".');
+        }
+        if (!((_a = entryPointFilter.securityStatus) === null || _a === void 0 ? void 0 : _a.length)) {
+            throw new Error('The "entrypoints_statuses" must be provided when using "entrypoint_connectivity_statuses".');
+        }
+        (0, entrypoints_1.validateEntryPointsStatuses)(entryPointFilter.securityStatus);
+        if ((_b = entryPointFilter.connectivityStatus) === null || _b === void 0 ? void 0 : _b.length) {
+            (0, entrypoints_1.validateConnectivityStatuses)(entryPointFilter.connectivityStatus);
+        }
+    }
+}
+const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds, entryPointsStatuses, entryPointFilter, projectId }) => {
+    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) &&
+        !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) &&
+        !entryPointFilter) {
+        // validate discovery only if no entry point IDs or statuses are provided
+        (0, discovery_1.validateDiscovery)(discoveryTypes || []);
+        validateFileId(fileId, discoveryTypes || []);
+        validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+    }
+    validateEntryPointFilters(entryPointIds, entryPointsStatuses, entryPointFilter, projectId);
     if (tests) {
         (0, tests_1.validateTests)(tests);
     }
