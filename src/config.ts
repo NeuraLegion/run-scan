@@ -1,5 +1,10 @@
 import { Discovery, validateDiscovery } from './discovery';
-import { EntryPointStatus, validateEntryPointsStatuses } from './entrypoints';
+import {
+  Connectivity,
+  EntryPointStatus,
+  validateConnectivityStatuses,
+  validateEntryPointsStatuses
+} from './entrypoints';
 import { TestType, validateTests } from './tests';
 import { URL } from 'url';
 
@@ -11,6 +16,11 @@ export interface RequestExclusion {
 export interface Exclusions {
   params?: string[];
   requests?: RequestExclusion[];
+}
+
+export interface EntryPointFilter {
+  securityStatus: EntryPointStatus[];
+  connectivityStatus?: Connectivity[];
 }
 
 export interface Config {
@@ -27,6 +37,7 @@ export interface Config {
   tests?: TestType[];
   entryPointIds?: string[];
   entryPointsStatuses?: EntryPointStatus[];
+  entryPointFilter?: EntryPointFilter;
 }
 
 const invalidUrlProtocols: ReadonlySet<string> = new Set<string>([
@@ -110,20 +121,19 @@ function validateFileId(
   }
 }
 
-export const validateConfig = ({
-  fileId,
-  crawlerUrls,
-  discoveryTypes,
-  tests,
-  entryPointIds,
-  entryPointsStatuses,
-  projectId
-}: Config) => {
-  if (!entryPointIds?.length && !entryPointsStatuses?.length) {
-    // validate discovery only if no entry point IDs or statuses are provided
-    validateDiscovery(discoveryTypes || []);
-    validateFileId(fileId, discoveryTypes || []);
-    validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+function validateEntryPointFilters(
+  entryPointIds: string[] | undefined,
+  entryPointsStatuses: EntryPointStatus[] | undefined,
+  entryPointFilter: EntryPointFilter | undefined,
+  projectId: string | undefined
+) {
+  if (
+    entryPointIds?.length &&
+    (entryPointsStatuses?.length || entryPointFilter)
+  ) {
+    throw new Error(
+      'The "entrypoints" and "entrypoints_statuses" are mutually exclusive and cannot be used together.'
+    );
   }
 
   if (entryPointsStatuses?.length) {
@@ -135,6 +145,55 @@ export const validateConfig = ({
 
     validateEntryPointsStatuses(entryPointsStatuses);
   }
+
+  if (entryPointFilter) {
+    if (!projectId) {
+      throw new Error(
+        'The "project_id" must be provided when using "entrypoints_statuses" and "entrypoint_connectivity_statuses".'
+      );
+    }
+
+    if (!entryPointFilter.securityStatus?.length) {
+      throw new Error(
+        'The "entrypoints_statuses" must be provided when using "entrypoint_connectivity_statuses".'
+      );
+    }
+
+    validateEntryPointsStatuses(entryPointFilter.securityStatus);
+
+    if (entryPointFilter.connectivityStatus?.length) {
+      validateConnectivityStatuses(entryPointFilter.connectivityStatus);
+    }
+  }
+}
+
+export const validateConfig = ({
+  fileId,
+  crawlerUrls,
+  discoveryTypes,
+  tests,
+  entryPointIds,
+  entryPointsStatuses,
+  entryPointFilter,
+  projectId
+}: Config) => {
+  if (
+    !entryPointIds?.length &&
+    !entryPointsStatuses?.length &&
+    !entryPointFilter
+  ) {
+    // validate discovery only if no entry point IDs or statuses are provided
+    validateDiscovery(discoveryTypes || []);
+    validateFileId(fileId, discoveryTypes || []);
+    validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
+  }
+
+  validateEntryPointFilters(
+    entryPointIds,
+    entryPointsStatuses,
+    entryPointFilter,
+    projectId
+  );
 
   if (tests) {
     validateTests(tests);

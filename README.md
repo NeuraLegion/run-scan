@@ -155,7 +155,7 @@ exclude_params: |
 
 ### `entrypoints`
 
-A list of entry point ids to be included in the scan.
+A list of entry point ids to be included in the scan. Mutually exclusive with `entrypoints_statuses`.
 
 _Example:_
 
@@ -166,7 +166,7 @@ entrypoints: |
 
 ### `entrypoints_statuses`
 
-A list of entrypoint statuses to auto-select entrypoints from a project. When provided, discovery configuration is not required.
+A list of entrypoint statuses to auto-select entrypoints from a project. When provided, discovery configuration is not required. Mutually exclusive with `entrypoints`.
 
 Available statuses:
 
@@ -182,6 +182,26 @@ _Example:_
 ```yaml
 entrypoints_statuses: |
   [ "new", "changed" ]
+```
+
+### `entrypoint_connectivity_statuses`
+
+A list of entry point connectivity statuses to filter on. When provided, only entry points matching the specified connectivity state will be included in the scan.
+
+Available statuses:
+
+- `ok` - entry points with successful connectivity
+- `problem` - entry points with connectivity problems
+- `unauthorized` - entry points returning unauthorized responses
+- `unreachable` - entry points that cannot be reached
+
+Requires `project_id` and `entrypoints_statuses` to be set.
+
+_Example:_
+
+```yaml
+entrypoint_connectivity_statuses: |
+  [ "ok" ]
 ```
 
 ### `exclude_entry_points`
@@ -273,6 +293,25 @@ steps:
       project_id: gBAh2n9BD9ps7FVQXbLWXv
       entrypoints_statuses: |
         [ "new", "changed" ]
+  - name: Get the output scan url
+    run: echo "The scan was started on ${{ steps.start.outputs.url }}"
+```
+
+#### Start a scan with entrypoints filtered by connectivity status
+
+```yaml
+steps:
+  - name: Bright Security Scan
+    id: start
+    uses: NeuraLegion/run-scan@release
+    with:
+      api_token: ${{ secrets.BRIGHT_TOKEN }}
+      name: GitHub scan ${{ github.sha }}
+      project_id: gBAh2n9BD9ps7FVQXbLWXv
+      entrypoints_statuses: |
+        [ "new", "changed" ]
+      entrypoint_connectivity_statuses: |
+        [ "ok" ]
   - name: Get the output scan url
     run: echo "The scan was started on ${{ steps.start.outputs.url }}"
 ```

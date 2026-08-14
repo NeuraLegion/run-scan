@@ -56,6 +56,9 @@ inputs:
   entrypoints_statuses:
     description: 'A list of entrypoint statuses to auto-select from a project (requires project_id). Possible values: new, changed, tested, vulnerable'
     required: false
+  entrypoint_connectivity_statuses:
+    description: 'A list of entry point connectivity statuses to filter on (requires project_id and entrypoints_statuses). Possible values: ok, problem, unauthorized, unreachable'
+    required: false
 
 outputs:
   url:
