@@ -23,6 +23,15 @@ export interface EntryPointFilter {
   connectivityStatus?: Connectivity[];
 }
 
+export interface ToolInfo {
+  source: string;
+  client?: {
+    name: string;
+    version: string;
+  };
+  provider?: string;
+}
+
 export interface Config {
   name: string;
   discoveryTypes?: Discovery[];
@@ -38,6 +47,7 @@ export interface Config {
   entryPointIds?: string[];
   entryPointsStatuses?: EntryPointStatus[];
   entryPointFilter?: EntryPointFilter;
+  info?: ToolInfo;
 }
 
 const invalidUrlProtocols: ReadonlySet<string> = new Set<string>([

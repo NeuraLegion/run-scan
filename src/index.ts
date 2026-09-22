@@ -158,7 +158,10 @@ if (restartScanID) {
             connectivityStatus: connectivityStatuses
           }
         }
-      : {})
+      : {}),
+    info: {
+      source: 'github_actions'
+    }
   };
 
   try {
