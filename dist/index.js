@@ -346,7 +346,7 @@ else {
         discoveryTypes = [discovery_1.Discovery.ARCHIVE];
     }
     const uniqueTests = tests ? [...new Set(tests)] : undefined;
-    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
+    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
         ? {
             exclusions: {
                 requests: excludedEntryPoints,
@@ -360,7 +360,9 @@ else {
                 connectivityStatus: connectivityStatuses
             }
         }
-        : {}));
+        : {})), { info: {
+            source: 'github_actions'
+        } });
     try {
         (0, config_1.validateConfig)(config);
     }
