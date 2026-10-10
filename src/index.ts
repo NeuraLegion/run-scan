@@ -150,12 +150,13 @@ if (restartScanID) {
           }
         }
       : {}),
-    ...(entryPointsStatuses?.length ? { entryPointsStatuses } : {}),
-    ...(connectivityStatuses?.length
+    ...(entryPointsStatuses?.length || connectivityStatuses?.length
       ? {
           entryPointFilter: {
             securityStatus: entryPointsStatuses || [],
-            connectivityStatus: connectivityStatuses
+            ...(connectivityStatuses?.length
+              ? { connectivityStatus: connectivityStatuses }
+              : {})
           }
         }
       : {}),
