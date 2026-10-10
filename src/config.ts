@@ -45,7 +45,6 @@ export interface Config {
   hostsFilter?: string[];
   tests?: TestType[];
   entryPointIds?: string[];
-  entryPointsStatuses?: EntryPointStatus[];
   entryPointFilter?: EntryPointFilter;
   info?: ToolInfo;
 }
@@ -133,33 +132,19 @@ function validateFileId(
 
 function validateEntryPointFilters(
   entryPointIds: string[] | undefined,
-  entryPointsStatuses: EntryPointStatus[] | undefined,
   entryPointFilter: EntryPointFilter | undefined,
   projectId: string | undefined
 ) {
-  if (
-    entryPointIds?.length &&
-    (entryPointsStatuses?.length || entryPointFilter)
-  ) {
+  if (entryPointIds?.length && entryPointFilter) {
     throw new Error(
       'The "entrypoints" and "entrypoints_statuses" are mutually exclusive and cannot be used together.'
     );
   }
 
-  if (entryPointsStatuses?.length) {
-    if (!projectId) {
-      throw new Error(
-        'The "project_id" must be provided when using "entrypoints_statuses".'
-      );
-    }
-
-    validateEntryPointsStatuses(entryPointsStatuses);
-  }
-
   if (entryPointFilter) {
     if (!projectId) {
       throw new Error(
-        'The "project_id" must be provided when using "entrypoints_statuses" and "entrypoint_connectivity_statuses".'
+        'The "project_id" must be provided when using "entrypoints_statuses" or "entrypoint_connectivity_statuses".'
       );
     }
 
@@ -183,27 +168,17 @@ export const validateConfig = ({
   discoveryTypes,
   tests,
   entryPointIds,
-  entryPointsStatuses,
   entryPointFilter,
   projectId
 }: Config) => {
-  if (
-    !entryPointIds?.length &&
-    !entryPointsStatuses?.length &&
-    !entryPointFilter
-  ) {
-    // validate discovery only if no entry point IDs or statuses are provided
+  if (!entryPointIds?.length && !entryPointFilter) {
+    // validate discovery only if no entry point IDs or filter are provided
     validateDiscovery(discoveryTypes || []);
     validateFileId(fileId, discoveryTypes || []);
     validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
   }
 
-  validateEntryPointFilters(
-    entryPointIds,
-    entryPointsStatuses,
-    entryPointFilter,
-    projectId
-  );
+  validateEntryPointFilters(entryPointIds, entryPointFilter, projectId);
 
   if (tests) {
     validateTests(tests);
