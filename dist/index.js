@@ -67,21 +67,14 @@ function validateFileId(fileId, discoveryTypes = []) {
         }
     }
 }
-function validateEntryPointFilters(entryPointIds, entryPointsStatuses, entryPointFilter, projectId) {
+function validateEntryPointFilters(entryPointIds, entryPointFilter, projectId) {
     var _a, _b;
-    if ((entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) &&
-        ((entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) || entryPointFilter)) {
+    if ((entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) && entryPointFilter) {
         throw new Error('The "entrypoints" and "entrypoints_statuses" are mutually exclusive and cannot be used together.');
-    }
-    if (entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) {
-        if (!projectId) {
-            throw new Error('The "project_id" must be provided when using "entrypoints_statuses".');
-        }
-        (0, entrypoints_1.validateEntryPointsStatuses)(entryPointsStatuses);
     }
     if (entryPointFilter) {
         if (!projectId) {
-            throw new Error('The "project_id" must be provided when using "entrypoints_statuses" and "entrypoint_connectivity_statuses".');
+            throw new Error('The "project_id" must be provided when using "entrypoints_statuses" or "entrypoint_connectivity_statuses".');
         }
         if (!((_a = entryPointFilter.securityStatus) === null || _a === void 0 ? void 0 : _a.length)) {
             throw new Error('The "entrypoints_statuses" must be provided when using "entrypoint_connectivity_statuses".');
@@ -92,16 +85,14 @@ function validateEntryPointFilters(entryPointIds, entryPointsStatuses, entryPoin
         }
     }
 }
-const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds, entryPointsStatuses, entryPointFilter, projectId }) => {
-    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) &&
-        !(entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) &&
-        !entryPointFilter) {
-        // validate discovery only if no entry point IDs or statuses are provided
+const validateConfig = ({ fileId, crawlerUrls, discoveryTypes, tests, entryPointIds, entryPointFilter, projectId }) => {
+    if (!(entryPointIds === null || entryPointIds === void 0 ? void 0 : entryPointIds.length) && !entryPointFilter) {
+        // validate discovery only if no entry point IDs or filter are provided
         (0, discovery_1.validateDiscovery)(discoveryTypes || []);
         validateFileId(fileId, discoveryTypes || []);
         validateCrawlerUrls(crawlerUrls, discoveryTypes || []);
     }
-    validateEntryPointFilters(entryPointIds, entryPointsStatuses, entryPointFilter, projectId);
+    validateEntryPointFilters(entryPointIds, entryPointFilter, projectId);
     if (tests) {
         (0, tests_1.validateTests)(tests);
     }
@@ -346,19 +337,18 @@ else {
         discoveryTypes = [discovery_1.Discovery.ARCHIVE];
     }
     const uniqueTests = tests ? [...new Set(tests)] : undefined;
-    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
+    const config = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ name }, (discoveryTypes ? { discoveryTypes } : {})), { module, entryPointIds: entrypoints }), (crawlerUrls ? { crawlerUrls } : {})), (fileId ? { fileId } : {})), (authObjectId ? { authObjectId } : {})), (repeaters ? { repeaters } : {})), (projectId ? { projectId } : {})), ((uniqueTests === null || uniqueTests === void 0 ? void 0 : uniqueTests.length) ? { tests: uniqueTests } : {})), ((hostsFilter === null || hostsFilter === void 0 ? void 0 : hostsFilter.length) ? { hostsFilter } : {})), ((excludedEntryPoints === null || excludedEntryPoints === void 0 ? void 0 : excludedEntryPoints.length) || (excludedParams === null || excludedParams === void 0 ? void 0 : excludedParams.length)
         ? {
             exclusions: {
                 requests: excludedEntryPoints,
                 params: excludedParams
             }
         }
-        : {})), ((entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) ? { entryPointsStatuses } : {})), ((connectivityStatuses === null || connectivityStatuses === void 0 ? void 0 : connectivityStatuses.length)
+        : {})), ((entryPointsStatuses === null || entryPointsStatuses === void 0 ? void 0 : entryPointsStatuses.length) || (connectivityStatuses === null || connectivityStatuses === void 0 ? void 0 : connectivityStatuses.length)
         ? {
-            entryPointFilter: {
-                securityStatus: entryPointsStatuses || [],
-                connectivityStatus: connectivityStatuses
-            }
+            entryPointFilter: Object.assign({ securityStatus: entryPointsStatuses || [] }, ((connectivityStatuses === null || connectivityStatuses === void 0 ? void 0 : connectivityStatuses.length)
+                ? { connectivityStatus: connectivityStatuses }
+                : {}))
         }
         : {})), { info: {
             source: 'github_actions'
